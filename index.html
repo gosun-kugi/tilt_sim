@@ -301,7 +301,7 @@
 
             updateThreeGeometry();
             
-            // カメラ追従制御用の変数
+            // カメラ追従制御用のマウスオフセット変数
             let targetCamX = 0;
             let targetCamY = 4;
             
@@ -310,7 +310,7 @@
                 const rect = canvas.getBoundingClientRect();
                 const x = ((clientX - rect.left) / rect.width) * 2 - 1;
                 const y = -((clientY - rect.top) / rect.height) * 2 + 1;
-                targetCamX = x * 2;
+                targetCamX = x * 3;
                 targetCamY = 4 + y * 2;
             };
 
@@ -329,20 +329,42 @@
                 const theta = state.angle * Math.PI / 180;
                 const R_val = state.diameter / 2;
                 const H_val = state.depth;
+                const s = state.scale;
+
                 // 右上の接線基準の相対座標からワールド空間定数を割り出す
-                const relativeY = (R_val * state.scale) * Math.sin(theta) + ((state.currentHc - H_val) * state.scale) * Math.cos(theta);
+                const relativeY = (R_val * s) * Math.sin(theta) + ((state.currentHc - H_val) * s) * Math.cos(theta);
                 clipPlane.constant = pivot.position.y + relativeY;
 
-                // カメラ位置のスムーズな補間
+                // --- [修正①] 90度等で中身が復活するバグの対策 ---
+                // 残り液体重量がほぼゼロの場合に液体を非表示にし、確実にクリップする
+                if (liquidMesh) {
+                    if (state.currentRemainWeight <= 0.1) {
+                        liquidMesh.visible = false;
+                    } else {
+                        liquidMesh.visible = true;
+                    }
+                }
+
+                // --- [修正②] 傾斜による見切れを完全に防ぐ、容器中心へのダイナミックカメラ追従システム ---
+                // 回転を考慮した容器中心 (Cx, Cy) をワールド座標系で算出
+                const Cx = -R_val * s * Math.cos(theta) - (H_val * s / 2) * Math.sin(theta);
+                const Cy = 4 + R_val * s * Math.sin(theta) - (H_val * s / 2) * Math.cos(theta);
+
                 const aspect = container.clientWidth / container.clientHeight;
-                const camDist = aspect < 1 ? 25 / aspect : 16; // 縦画面ならカメラを遠ざけて見切れないように
+                // 容器の全サイズ（常に約10以内にスケールされる）に合わせて最適な描画距離を計算
+                const baseDist = 12; 
+                const camDist = aspect < 1 ? (baseDist + 8) / aspect : baseDist + 4;
                 
-                camera.position.x += (targetCamX - camera.position.x) * 0.05;
-                camera.position.y += (targetCamY - camera.position.y) * 0.05;
-                camera.position.z = camDist;
+                // カメラ目標位置の補間
+                const targetX = Cx + targetCamX;
+                const targetY = Cy + (targetCamY - 4);
                 
-                // ターゲット（回転ピボットの中心寄り）を注視
-                camera.lookAt(0, 2, 0);
+                camera.position.x += (targetX - camera.position.x) * 0.05;
+                camera.position.y += (targetY - camera.position.y) * 0.05;
+                camera.position.z += (camDist - camera.position.z) * 0.05;
+                
+                // 常に傾いた容器の中心をカメラの正面に捉え続ける
+                camera.lookAt(Cx, Cy, 0);
 
                 renderer.render(scene, camera);
             }
@@ -518,7 +540,6 @@
 
         function onAngleChange() {
             state.angle = Number(angleSlider.value);
-            // 角度変動のみの場合はジオメトリ再構築を避け、軽量な物理値更新のみ実行
             const R = Math.max(1, state.diameter) / 2;
             const H = Math.max(1, state.depth);
             const D = Math.max(0.1, state.density);
@@ -534,7 +555,7 @@
             updateUI();
             if (chartInstance) {
                 chartInstance.options.currentAngle = state.angle;
-                chartInstance.update('none'); // アニメーションなしで高速更新
+                chartInstance.update('none'); // 高速更新
             }
         }
 
