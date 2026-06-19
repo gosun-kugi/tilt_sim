@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>液体傾斜シミュレーター</title>
+    <!-- Tailwind CSS, Three.js, Chart.js のインポート -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111827; }
+        .touch-none { touch-action: none; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+
+    <div class="flex flex-col md:flex-row h-[100dvh] overflow-hidden">
+        
+        <!-- ビジュアライゼーション領域 (PC:右側, スマホ:上部) -->
+        <div class="order-1 md:order-2 w-full md:w-2/3 flex flex-col relative h-[50dvh] md:h-full bg-gray-950">
+            <!-- 3D ビューポート -->
+            <div id="three-container" class="flex-1 w-full relative overflow-hidden bg-gray-900">
+                <canvas id="three-canvas" class="w-full h-full block touch-none cursor-move"></canvas>
+                <div class="absolute top-4 left-4 bg-gray-900/70 backdrop-blur px-3 py-1.5 rounded-lg border border-gray-700 text-sm flex items-center gap-2 pointer-events-none">
+                    <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <span class="text-gray-200 font-medium">3Dプレビュー (上面の接線回転)</span>
+                </div>
+            </div>
+            
+            <!-- グラフ領域 -->
+            <div class="h-[180px] md:h-[40%] w-full bg-gray-800 p-3 md:p-6 border-t border-gray-700 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] z-10">
+                <div class="w-full h-full relative">
+                    <canvas id="chart-canvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- コントロールパネル (PC:左側, スマホ:下部) -->
+        <div class="order-2 md:order-1 w-full md:w-1/3 md:min-w-[340px] p-5 md:p-6 bg-gray-800 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] md:shadow-2xl z-20 flex flex-col overflow-y-auto border-t md:border-t-0 md:border-r border-gray-700 h-[50dvh] md:h-full">
+            
+            <div class="flex items-center gap-3 mb-5 md:mb-6">
+                <!-- Water Droplet Icon -->
+                <svg class="text-orange-500 w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <h1 class="text-xl md:text-2xl font-bold text-gray-100">液体傾斜シミュレーター</h1>
+            </div>
+
+            <!-- パラメータ設定 -->
+            <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700 mb-5">
+                <div class="flex items-center gap-2 mb-3 text-orange-400 font-semibold text-sm">
+                    <!-- Gear Icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span>容器・液体パラメータ</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">直径 (mm)</label>
+                        <input type="number" id="input-diameter" min="1" value="1000" 
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">深さ (mm)</label>
+                        <input type="number" id="input-depth" min="1" value="1500" 
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">密度 (比重)</label>
+                        <input type="number" id="input-density" min="0.1" step="0.1" value="8" 
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">初期重量 (kg)</label>
+                        <input type="number" id="input-weight" min="0" value="5000" 
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <!-- スライダー -->
+            <div class="mb-5 px-1">
+                <div class="flex justify-between items-end mb-2">
+                    <label class="text-gray-300 font-medium text-sm">傾き調整</label>
+                    <span id="angle-val" class="text-3xl md:text-4xl font-bold text-orange-500">0°</span>
+                </div>
+                <input 
+                    type="range" id="angle-slider" min="0" max="90" step="1" value="0" 
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500 outline-none"
+                >
+                <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                    <span>0° (直立)</span>
+                    <span>45°</span>
+                    <span>90° (横倒し)</span>
+                </div>
+            </div>
+
+            <!-- 結果ハイライト -->
+            <div class="mt-auto space-y-3 pb-2 md:pb-0">
+                <div class="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center gap-3">
+                    <div class="bg-orange-500 p-2 rounded-lg flex-shrink-0">
+                        <!-- Info Icon -->
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div>
+                        <div class="text-xs text-orange-200 mb-0.5">こぼれ始める角度</div>
+                        <div id="spill-angle-val" class="text-lg md:text-xl font-bold text-white">-</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-900/50 border border-gray-700 rounded-xl p-3">
+                        <div class="text-xs text-gray-400 mb-0.5">残っている重量</div>
+                        <div class="text-base md:text-lg font-bold text-blue-400">
+                            <span id="remain-weight-val">0.0</span> <span class="text-xs font-normal">kg</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-700 rounded-xl p-3">
+                        <div class="text-xs text-gray-400 mb-0.5">こぼれた重量</div>
+                        <div class="text-base md:text-lg font-bold text-red-400">
+                            <span id="spill-weight-val">0.0</span> <span class="text-xs font-normal">kg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 状態管理 ---
+        const state = {
+            diameter: 1000,
+            depth: 1500,
+            density: 8,
+            weight: 5000,
+            angle: 0,
+            
+            // 計算結果キャッシュ
+            spillAngle: 0,
+            initialV: 0,
+            initialSpilledWeight: 0,
+            weightData: [],
+            
+            currentRemainWeight: 0,
+            currentSpilledWeight: 0,
+            currentHc: 0,
+            scale: 1
+        };
+
+        // --- 物理計算アルゴリズム ---
+        function getMaxVolume(theta_deg, R, H) {
+            const theta = (theta_deg * Math.PI) / 180;
+            if (theta >= Math.PI / 2 - 0.001) return 0;
+            if (theta === 0) return Math.PI * R * R * H;
+            
+            const tanT = Math.tan(theta);
+            const x0 = R - H / tanT;
+            if (x0 <= -R) return Math.PI * R * R * (H - R * tanT);
+            if (x0 >= R) return 0;
+            
+            const clamp_x0 = Math.min(R, Math.max(-R, x0));
+            const term1 = (H - R * tanT) * (R * R * Math.PI / 2 - (clamp_x0 * Math.sqrt(R * R - clamp_x0 * clamp_x0) + R * R * Math.asin(clamp_x0 / R)));
+            const term2 = (2 / 3) * tanT * Math.pow(R * R - clamp_x0 * clamp_x0, 1.5);
+            return term1 + term2;
+        }
+
+        function findHc(targetV, theta_deg, R, H) {
+            if (targetV <= 0) return 0;
+            const theta = (theta_deg * Math.PI) / 180;
+            if (theta === 0) return targetV / (Math.PI * R * R);
+            
+            const tanT = Math.tan(theta);
+            let low = -R * tanT;
+            let high = Math.max(H + R * tanT, targetV / (Math.PI * R * R) + R * tanT);
+            
+            for (let i = 0; i < 40; i++) {
+                const mid = (low + high) / 2;
+                let v = 0;
+                const x0 = -mid / tanT;
+                if (x0 <= -R) {
+                    v = Math.PI * R * R * mid;
+                } else if (x0 >= R) {
+                    v = 0;
+                } else {
+                    const c = Math.min(R, Math.max(-R, x0));
+                    v = mid * (R * R * Math.PI / 2 - (c * Math.sqrt(R * R - c * c) + R * R * Math.asin(c / R))) + (2/3) * tanT * Math.pow(R * R - c * c, 1.5);
+                }
+                if (v < targetV) low = mid; else high = mid;
+            }
+            return (low + high) / 2;
+        }
+
+        function updatePhysics() {
+            const R = Math.max(1, state.diameter) / 2;
+            const H = Math.max(1, state.depth);
+            const D = Math.max(0.1, state.density);
+            const W = Math.max(0, state.weight);
+
+            const maxV = Math.PI * R * R * H;
+            const initialVRaw = (W * 1e6) / D;
+            state.initialV = Math.min(initialVRaw, maxV);
+            state.initialSpilledWeight = Math.max(0, W - state.initialV * D * 1e-6);
+
+            // こぼれ始める限界角度を二分探索
+            let low = 0, high = 89.9;
+            for (let i = 0; i < 30; i++) {
+                const mid = (low + high) / 2;
+                if (getMaxVolume(mid, R, H) > state.initialV) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            state.spillAngle = high;
+
+            // 0から90度までの重量データを計算
+            state.weightData = Array.from({ length: 91 }, (_, i) => {
+                const v = Math.min(state.initialV, getMaxVolume(Math.min(i, 89.99), R, H));
+                return v * D * 1e-6;
+            });
+
+            // 現在の角度における結果を計算
+            const safeAngle = Math.min(state.angle, 89.99);
+            const currentMaxV = getMaxVolume(safeAngle, R, H);
+            const currentActualV = Math.min(state.initialV, currentMaxV);
+            state.currentRemainWeight = Math.max(0, currentActualV * D * 1e-6);
+            state.currentSpilledWeight = Math.max(0, W - state.currentRemainWeight);
+            
+            // 液面中心高さ
+            state.currentHc = findHc(currentActualV, safeAngle, R, H);
+            state.scale = 10 / Math.max(state.diameter, state.depth);
+        }
+
+        // --- DOM要素とイベント連携 ---
+        const inputDiameter = document.getElementById('input-diameter');
+        const inputDepth = document.getElementById('input-depth');
+        const inputDensity = document.getElementById('input-density');
+        const inputWeight = document.getElementById('input-weight');
+        const angleSlider = document.getElementById('angle-slider');
+
+        const angleVal = document.getElementById('angle-val');
+        const spillAngleVal = document.getElementById('spill-angle-val');
+        const remainWeightVal = document.getElementById('remain-weight-val');
+        const spillWeightVal = document.getElementById('spill-weight-val');
+
+        function readInputs() {
+            state.diameter = Number(inputDiameter.value);
+            state.depth = Number(inputDepth.value);
+            state.density = Number(inputDensity.value);
+            state.weight = Number(inputWeight.value);
+            state.angle = Number(angleSlider.value);
+        }
+
+        function updateUI() {
+            angleVal.innerText = `${state.angle}°`;
+            if (state.spillAngle > 0.1 && state.spillAngle < 89.8) {
+                spillAngleVal.innerText = `${state.spillAngle.toFixed(1)}°`;
+            } else if (state.spillAngle <= 0.1) {
+                spillAngleVal.innerText = '最初からあふれています';
+            } else {
+                spillAngleVal.innerText = '90°でもこぼれません';
+            }
+            remainWeightVal.innerText = state.currentRemainWeight.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            spillWeightVal.innerText = state.currentSpilledWeight.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+
+        // --- Three.js 3D描画システム ---
+        let renderer, scene, camera, pivot, containerGroup, containerMesh, liquidMesh, clipPlane;
+
+        function initThree() {
+            const canvas = document.getElementById('three-canvas');
+            const container = document.getElementById('three-container');
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.localClippingEnabled = true;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111827); // Tailwind gray-900
+
+            camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+
+            // 環境光 & 平行光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(10, 20, 15);
+            scene.add(dirLight);
+
+            // ピボット（上面の接線回転の起点用）
+            pivot = new THREE.Group();
+            pivot.position.set(0, 4, 0); // 中央よりやや上に浮かせる
+            scene.add(pivot);
+
+            containerGroup = new THREE.Group();
+            pivot.add(containerGroup);
+
+            // クリッピング平面（ワールド空間で水平＝常に液面が平ら）
+            clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+
+            updateThreeGeometry();
+            
+            // カメラ追従制御用の変数
+            let targetCamX = 0;
+            let targetCamY = 4;
+            
+            // マウス＆タッチ追従効果
+            const updateTarget = (clientX, clientY) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                targetCamX = x * 2;
+                targetCamY = 4 + y * 2;
+            };
+
+            canvas.addEventListener('mousemove', (e) => updateTarget(e.clientX, e.clientY));
+            canvas.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) updateTarget(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // ピボットの傾き回転 (Z軸マイナス回転＝右へ傾く)
+                pivot.rotation.z = -state.angle * Math.PI / 180;
+
+                // 液面の高さをワールド座標系のクリッピング位置へ変換
+                const theta = state.angle * Math.PI / 180;
+                const R_val = state.diameter / 2;
+                const H_val = state.depth;
+                // 右上の接線基準の相対座標からワールド空間定数を割り出す
+                const relativeY = (R_val * state.scale) * Math.sin(theta) + ((state.currentHc - H_val) * state.scale) * Math.cos(theta);
+                clipPlane.constant = pivot.position.y + relativeY;
+
+                // カメラ位置のスムーズな補間
+                const aspect = container.clientWidth / container.clientHeight;
+                const camDist = aspect < 1 ? 25 / aspect : 16; // 縦画面ならカメラを遠ざけて見切れないように
+                
+                camera.position.x += (targetCamX - camera.position.x) * 0.05;
+                camera.position.y += (targetCamY - camera.position.y) * 0.05;
+                camera.position.z = camDist;
+                
+                // ターゲット（回転ピボットの中心寄り）を注視
+                camera.lookAt(0, 2, 0);
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        function updateThreeGeometry() {
+            // 古いメッシュを消去
+            while(containerGroup.children.length > 0) {
+                const child = containerGroup.children[0];
+                containerGroup.remove(child);
+                child.geometry.dispose();
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+
+            const R_val = state.diameter / 2;
+            const H_val = state.depth;
+            const s = state.scale;
+
+            // 回転軸(右上)がピボット中心(0,0,0)に重なるように配置
+            containerGroup.position.set(-R_val * s, -H_val * s, 0);
+
+            // 1. 透けている容器シリンダー
+            const cylinderGeom = new THREE.CylinderGeometry(R_val * s, R_val * s, H_val * s, 64, 1, true);
+            cylinderGeom.translate(0, H_val * s / 2, 0);
+            const containerMat = new THREE.MeshPhysicalMaterial({
+                color: 0xcccccc,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide,
+                roughness: 0.1,
+                metalness: 0.3,
+                depthWrite: false
+            });
+            const containerMesh = new THREE.Mesh(cylinderGeom, containerMat);
+            containerGroup.add(containerMesh);
+
+            // 2. 容器底面
+            const bottomGeom = new THREE.CircleGeometry(R_val * s, 64);
+            bottomGeom.rotateX(-Math.PI / 2);
+            const bottomMat = new THREE.MeshPhysicalMaterial({
+                color: 0xcccccc, transparent: true, opacity: 0.35, side: THREE.DoubleSide
+            });
+            containerGroup.add(new THREE.Mesh(bottomGeom, bottomMat));
+
+            // 3. 深いオレンジ色の液体 (クリッピングプレーン適用)
+            const liquidGeom = new THREE.CylinderGeometry(R_val * s * 0.98, R_val * s * 0.98, H_val * s, 64);
+            liquidGeom.translate(0, H_val * s / 2, 0);
+            const liquidMat = new THREE.MeshStandardMaterial({
+                color: 0xe65100, // 深いオレンジ
+                roughness: 0.2,
+                metalness: 0.1,
+                side: THREE.DoubleSide,
+                clippingPlanes: [clipPlane]
+            });
+            liquidMesh = new THREE.Mesh(liquidGeom, liquidMat);
+            containerGroup.add(liquidMesh);
+        }
+
+        // --- Chart.js 折れ線グラフ描画システム ---
+        let chartInstance;
+
+        function initChart() {
+            const ctx = document.getElementById('chart-canvas').getContext('2d');
+            
+            // 現在の角度の垂直線と合致する点のプロットマーカーを描画するプラグイン
+            const verticalLinePlugin = {
+                id: 'verticalLine',
+                afterDraw: (chart) => {
+                    const currAngle = chart.options.currentAngle;
+                    if (currAngle === undefined) return;
+                    
+                    const x = chart.scales.x.getPixelForValue(currAngle);
+                    const topY = chart.scales.y.top;
+                    const bottomY = chart.scales.y.bottom;
+                    const chartCtx = chart.ctx;
+                    chartCtx.save();
+                    
+                    // 縦の点線
+                    chartCtx.beginPath();
+                    chartCtx.moveTo(x, topY);
+                    chartCtx.lineTo(x, bottomY);
+                    chartCtx.lineWidth = 1.5;
+                    chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    chartCtx.setLineDash([4, 4]);
+                    chartCtx.stroke();
+                    
+                    // 交点の円マーカー
+                    const yValue = state.weightData[Math.round(currAngle)];
+                    if (yValue !== undefined) {
+                        const y = chart.scales.y.getPixelForValue(yValue);
+                        chartCtx.beginPath();
+                        chartCtx.arc(x, y, 6, 0, 2 * Math.PI);
+                        chartCtx.fillStyle = '#ffffff';
+                        chartCtx.fill();
+                        chartCtx.lineWidth = 2.5;
+                        chartCtx.strokeStyle = '#e65100';
+                        chartCtx.stroke();
+                    }
+                    chartCtx.restore();
+                }
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: 91 }, (_, i) => i),
+                    datasets: [{
+                        label: '残り液体重量 (kg)',
+                        data: state.weightData,
+                        borderColor: '#e65100',
+                        backgroundColor: 'rgba(230, 81, 0, 0.15)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    currentAngle: state.angle,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (ctx) => `傾き: ${ctx[0].label}°`,
+                                label: (ctx) => `残量: ${ctx.raw.toFixed(1)} kg`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '傾き (度)', color: '#9ca3af', font: { size: 10 } },
+                            ticks: { color: '#9ca3af', stepSize: 15 },
+                            grid: { color: '#374151' }
+                        },
+                        y: {
+                            title: { display: true, text: '重量 (kg)', color: '#9ca3af', font: { size: 10 } },
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: '#374151' },
+                            min: 0,
+                            max: Math.ceil((state.initialV * state.density * 1e-6) / 1000) * 1000 || 1000
+                        }
+                    }
+                },
+                plugins: [verticalLinePlugin]
+            });
+        }
+
+        function updateChart() {
+            if (!chartInstance) return;
+            chartInstance.data.datasets[0].data = state.weightData;
+            chartInstance.options.scales.y.max = Math.ceil((state.initialV * state.density * 1e-6) / 1000) * 1000 || 1000;
+            chartInstance.options.currentAngle = state.angle;
+            chartInstance.update();
+        }
+
+        // --- 全体の再計算と再描画フロー ---
+        function onParameterChange() {
+            readInputs();
+            updatePhysics();
+            updateUI();
+            updateThreeGeometry();
+            updateChart();
+        }
+
+        function onAngleChange() {
+            state.angle = Number(angleSlider.value);
+            // 角度変動のみの場合はジオメトリ再構築を避け、軽量な物理値更新のみ実行
+            const R = Math.max(1, state.diameter) / 2;
+            const H = Math.max(1, state.depth);
+            const D = Math.max(0.1, state.density);
+            const W = Math.max(0, state.weight);
+
+            const safeAngle = Math.min(state.angle, 89.99);
+            const currentMaxV = getMaxVolume(safeAngle, R, H);
+            const currentActualV = Math.min(state.initialV, currentMaxV);
+            state.currentRemainWeight = Math.max(0, currentActualV * D * 1e-6);
+            state.currentSpilledWeight = Math.max(0, W - state.currentRemainWeight);
+            state.currentHc = findHc(currentActualV, safeAngle, R, H);
+
+            updateUI();
+            if (chartInstance) {
+                chartInstance.options.currentAngle = state.angle;
+                chartInstance.update('none'); // アニメーションなしで高速更新
+            }
+        }
+
+        // --- イベント初期登録 ---
+        inputDiameter.addEventListener('input', onParameterChange);
+        inputDepth.addEventListener('input', onParameterChange);
+        inputDensity.addEventListener('input', onParameterChange);
+        inputWeight.addEventListener('input', onParameterChange);
+        angleSlider.addEventListener('input', onAngleChange);
+
+        window.addEventListener('resize', () => {
+            const container = document.getElementById('three-container');
+            if (renderer && camera) {
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+            }
+        });
+
+        // --- 初期化起動 ---
+        readInputs();
+        updatePhysics();
+        updateUI();
+        initThree();
+        initChart();
+    </script>
+</body>
+</html>
