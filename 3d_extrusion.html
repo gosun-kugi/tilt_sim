@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>銅の熱間押出 3D解説アニメーション</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Noto Sans JP & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        /* 3D空間に追従するラベル */
+        .label-3d {
+            position: fixed;
+            z-index: 10;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            transition: opacity 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .label-3d-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            margin: 2px auto 0;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+
+        /* カスタムスライダー（動画シークバー） */
+        input[type="range"].timeline-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"].timeline-slider::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.35);
+        }
+
+        input[type="range"].timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 9999px;
+            background: #f97316;
+            border: 2px solid #ffffff;
+            margin-top: -5px;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.8);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"].timeline-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* グラスモーフィズムパネル */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- 3Dキャンバスコンテナ -->
+    <div id="canvas-container"></div>
+
+    <!-- 3D追従パーツラベルレイヤー -->
+    <div id="labels-layer" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+        <div id="label-stem" class="label-3d">
+            <div id="label-stem-text" class="bg-slate-900/85 border border-sky-400/50 text-sky-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                ステム（押し棒）
+            </div>
+            <div class="label-3d-dot bg-sky-400"></div>
+        </div>
+        <div id="label-billet" class="label-3d">
+            <div class="bg-slate-900/85 border border-orange-400/60 text-orange-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                銅ビレット（材料）
+            </div>
+            <div class="label-3d-dot bg-orange-400"></div>
+        </div>
+        <div id="label-container" class="label-3d">
+            <div class="bg-slate-900/85 border border-slate-400/50 text-slate-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                コンテナ（頑丈な筒）
+            </div>
+            <div class="label-3d-dot bg-slate-300"></div>
+        </div>
+        <div id="label-die" class="label-3d">
+            <div id="label-die-text" class="bg-slate-900/85 border border-amber-400/60 text-amber-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                ダイス（型）
+            </div>
+            <div class="label-3d-dot bg-amber-400"></div>
+        </div>
+        <div id="label-product" class="label-3d">
+            <div class="bg-slate-900/85 border border-emerald-400/60 text-emerald-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                押し出された銅製品
+            </div>
+            <div class="label-3d-dot bg-emerald-400"></div>
+        </div>
+        <div id="label-friction" class="label-3d">
+            <div id="label-friction-text" class="bg-rose-950/90 border border-rose-400/80 text-rose-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                🔥 壁との摩擦あり（抵抗大）
+            </div>
+            <div class="label-3d-dot bg-rose-400"></div>
+        </div>
+    </div>
+
+    <!-- ヘッダー＆リアルタイム計器UI -->
+    <header class="fixed top-0 left-0 right-0 z-20 p-3 sm:p-4 pointer-events-none flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2">
+        <!-- タイトルバッジ -->
+        <div class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto shadow-xl flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-700 flex items-center justify-center shadow-inner shrink-0">
+                <!-- 炎アイコン SVG -->
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-sm sm:text-base font-bold tracking-wide text-white leading-tight">銅の熱間押出（ねっかんおしだし）</h1>
+                <p class="text-[11px] sm:text-xs text-slate-300">ドラッグで視点回転・スクロール/ピンチで拡大縮小</p>
+            </div>
+        </div>
+
+        <!-- 押出方式 切り替えタブ（直接押出 vs 間接押出） -->
+        <div class="glass-panel rounded-2xl p-1.5 pointer-events-auto shadow-xl flex items-center gap-1.5">
+            <button id="btn-mode-direct" onclick="setExtrusionMode('direct')" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-orange-500 text-white shadow-md flex items-center gap-1.5">
+                <span>直接押出</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-black/25 font-normal hidden sm:inline">摩擦あり</span>
+            </button>
+            <button id="btn-mode-indirect" onclick="setExtrusionMode('indirect')" class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5">
+                <span>間接押出</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-normal hidden sm:inline">摩擦なし</span>
+            </button>
+        </div>
+
+        <!-- リアルタイム計器（温度・圧力・摩擦） -->
+        <div class="glass-panel rounded-2xl px-3.5 py-2 pointer-events-auto shadow-xl flex items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ビレット温度</span>
+                <div class="flex items-baseline gap-1">
+                    <span id="hud-temp" class="text-base sm:text-lg font-bold font-mono text-orange-400">25</span>
+                    <span class="text-xs text-slate-300">℃</span>
+                </div>
+            </div>
+            <div class="w-px h-7 bg-slate-700"></div>
+            <div class="flex flex-col">
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">押出圧力</span>
+                <div class="flex items-baseline gap-1">
+                    <span id="hud-pressure" class="text-base sm:text-lg font-bold font-mono text-sky-400">0</span>
+                    <span class="text-xs text-slate-300">トン</span>
+                </div>
+            </div>
+            <div class="w-px h-7 bg-slate-700 hidden sm:block"></div>
+            <div class="hidden sm:flex flex-col">
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">壁との摩擦</span>
+                <span id="hud-friction" class="text-xs font-bold text-rose-400 mt-0.5">あり（高圧必要）</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 右側サイドツールバー（製品形状・視点・表示切替） -->
+    <aside class="fixed right-3 top-28 sm:top-24 z-20 flex flex-col gap-2 pointer-events-auto">
+        <!-- 押し出す形（ダイス）選択 -->
+        <div class="glass-panel rounded-2xl p-2 shadow-xl flex flex-col gap-1.5">
+            <span class="text-[10px] text-center font-bold text-slate-400 px-1">型の形</span>
+            <button id="btn-shape-round" onclick="setDieShape('round')" class="shape-btn px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-orange-500 text-white shadow-md">
+                ● 丸棒
+            </button>
+            <button id="btn-shape-hex" onclick="setDieShape('hex')" class="shape-btn px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700">
+                ⬡ 六角棒
+            </button>
+            <button id="btn-shape-square" onclick="setDieShape('square')" class="shape-btn px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700">
+                ■ 角棒
+            </button>
+        </div>
+
+        <!-- 表示オプション -->
+        <div class="glass-panel rounded-2xl p-2 shadow-xl flex flex-col gap-1.5">
+            <button id="btn-cutaway" onclick="toggleCutaway()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-sky-500/20 border border-sky-400/50 text-sky-200 hover:bg-sky-500/30">
+                断面: ON
+            </button>
+            <button id="btn-labels" onclick="toggleLabels()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-sky-500/20 border border-sky-400/50 text-sky-200 hover:bg-sky-500/30">
+                名前: ON
+            </button>
+            <button onclick="resetCamera()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700">
+                視点リセット
+            </button>
+        </div>
+    </aside>
+
+    <!-- 下部：解説テロップ＆動画コントローラー -->
+    <footer class="fixed bottom-0 left-0 right-0 z-20 p-3 sm:p-4 pointer-events-none flex flex-col items-center gap-2.5">
+        <!-- 解説字幕カード -->
+        <div class="glass-panel rounded-2xl px-4 py-3 sm:px-6 sm:py-3.5 max-w-2xl w-full shadow-2xl pointer-events-auto border-l-4 border-l-orange-500 transition-all">
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <span id="step-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-500/20 text-orange-300 border border-orange-500/40">
+                    STEP 1 / 4：加熱
+                </span>
+                <span id="step-analogy" class="text-[11px] text-amber-300 font-medium hidden sm:inline">
+                    💡 たとえるなら「冷えて硬いバターを温める」イメージ
+                </span>
+            </div>
+            <p id="step-caption" class="text-xs sm:text-sm text-slate-100 leading-relaxed font-medium">
+                銅のかたまり（ビレット）を約850℃まで赤熱させます。硬い銅も高温にすると、粘土のように変形しやすくなります。
+            </p>
+        </div>
+
+        <!-- 動画プレーヤー風コントロールバー -->
+        <div class="glass-panel rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3 max-w-2xl w-full shadow-2xl pointer-events-auto flex flex-col gap-2">
+            <!-- シークバー -->
+            <div class="flex items-center gap-3">
+                <button id="btn-play-pause" onclick="togglePlay()" class="w-9 h-9 rounded-full bg-orange-500 hover:bg-orange-400 active:scale-95 text-white flex items-center justify-center shadow-lg transition-all shrink-0" aria-label="再生・一時停止">
+                    <!-- 一時停止アイコン（初期は自動再生） -->
+                    <svg id="icon-pause" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
+                    <svg id="icon-play" class="w-4 h-4 hidden ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                </button>
+
+                <div class="flex-1 flex flex-col gap-1">
+                    <input id="timeline-slider" type="range" min="0" max="1000" value="0" class="timeline-slider w-full">
+                    <!-- ステップジャンプボタン -->
+                    <div class="grid grid-cols-4 gap-1 text-[10px] sm:text-xs">
+                        <button onclick="jumpToStep(0)" id="nav-step-0" class="step-nav-btn py-1 rounded-lg font-bold text-center transition-colors bg-orange-500/30 text-orange-200">
+                            ① 加熱
+                        </button>
+                        <button onclick="jumpToStep(1)" id="nav-step-1" class="step-nav-btn py-1 rounded-lg font-bold text-center transition-colors text-slate-400 hover:text-white hover:bg-slate-800">
+                            ② 装填
+                        </button>
+                        <button onclick="jumpToStep(2)" id="nav-step-2" class="step-nav-btn py-1 rounded-lg font-bold text-center transition-colors text-slate-400 hover:text-white hover:bg-slate-800">
+                            ③ 押出
+                        </button>
+                        <button onclick="jumpToStep(3)" id="nav-step-3" class="step-nav-btn py-1 rounded-lg font-bold text-center transition-colors text-slate-400 hover:text-white hover:bg-slate-800">
+                            ④ 冷却・完成
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="replayAnimation()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 flex items-center justify-center transition-all shrink-0" title="最初から再生">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ==========================================
+        // 1. グローバル状態管理と定数
+        // ==========================================
+        let scene, camera, renderer;
+        let animationId = null;
+
+        // アニメーションのタイムライン設定（合計16秒で1サイクル）
+        const TOTAL_DURATION = 16.0;
+        let currentTime = 0.0;
+        let isPlaying = true;
+        let lastFrameTime = 0;
+
+        // 表示オプション状態
+        let isCutaway = true;
+        let showLabels = true;
+        let currentDieShape = 'round'; // 'round' | 'hex' | 'square'
+        let extrusionMode = 'direct';  // 'direct'（直接押出） | 'indirect'（間接押出）
+
+        // カメラ操作（球面座標による自前オービット制御）
+        const cameraTarget = new THREE.Vector3(1.2, 0.2, 0);
+        let camSpherical = { radius: 13.5, theta: 0.35, phi: 1.25 };
+        let isDragging = false;
+        let prevPointer = { x: 0, y: 0 };
+        let prevPinchDist = null;
+
+        // 3Dオブジェクト参照
+        let billetMesh, billetMat;
+        let productMesh, productMat;
+        let heaterGroup, heaterRings = [];
+        let stemGroup, dummyBlockMesh;
+        let hollowStemGroup, hollowStemCut, hollowStemFull;
+        let closingBlockMesh;
+        let containerOuterCut, containerInnerCut, containerOuterFull, containerInnerFull;
+        let dieGroup, dieHoleMesh;
+        let heatParticles, heatPositions, heatVelocities;
+        let pressureGlowMesh, pressureGlowMat;
+        let frictionGlowMesh, frictionGlowMat;
+
+        // ステップ解説データ（直接押出）
+        const STEPS_DIRECT = [
+            {
+                id: 0,
+                start: 0.0,
+                end: 3.5,
+                badge: "【直接押出】STEP 1 / 4：加熱",
+                analogy: "💡 たとえるなら「硬いバターを温めて柔らかくする」イメージ",
+                caption: "銅のかたまり（ビレット）を約850℃まで赤熱させます。硬い金属の銅も、高温に熱すると粘土のように変形しやすくなります。"
+            },
+            {
+                id: 1,
+                start: 3.5,
+                end: 6.0,
+                badge: "【直接押出】STEP 2 / 4：装填",
+                analogy: "💡 たとえるなら「ところてん突きに材料を入れる」イメージ",
+                caption: "赤熱した銅を頑丈な筒（コンテナ）にセットします。右端には固定された型（ダイス）があり、左から押し棒（ステム）が近づきます。"
+            },
+            {
+                id: 2,
+                start: 6.0,
+                end: 12.5,
+                badge: "【直接押出】STEP 3 / 4：押出（壁と擦れる！）",
+                analogy: "💡 筒の内壁と銅が擦れるため、大きな力（約2,800トン）が必要",
+                caption: "後ろから押し棒で押すと、銅全体が筒の中を移動して型の穴から出ます。構造はシンプルですが、壁との強い摩擦が発生します。"
+            },
+            {
+                id: 3,
+                start: 12.5,
+                end: 16.0,
+                badge: "【直接押出】STEP 4 / 4：冷却・完成",
+                analogy: "💡 上のボタンで「間接押出」に切り替えて違いを比べてみよう！",
+                caption: "押し出された長い銅製品は、冷えるにつれて美しい金属光沢へ戻ります。次は「間接押出」に切り替えて、動きと圧力の違いを見てみましょう。"
+            }
+        ];
+
+        // ステップ解説データ（間接押出）
+        const STEPS_INDIRECT = [
+            {
+                id: 0,
+                start: 0.0,
+                end: 3.5,
+                badge: "【間接押出】STEP 1 / 4：加熱",
+                analogy: "💡 加熱工程は同じ！約850℃で柔らかくします",
+                caption: "直接押出と同じく、まずは銅ビレットを約850℃まで赤熱させます。ここから先の「押し方」が大きく異なります。"
+            },
+            {
+                id: 1,
+                start: 3.5,
+                end: 6.0,
+                badge: "【間接押出】STEP 2 / 4：装填＆密閉",
+                analogy: "💡 後ろを「密閉フタ」で塞ぎ、前から「型＋中空の押し棒」を当てる！",
+                caption: "銅を筒に入れたら左端を頑丈なフタで完全に塞ぎます。右からは穴の空いた押し棒（中空ステム）の先端に付いた「型」が近づきます。"
+            },
+            {
+                id: 2,
+                start: 6.0,
+                end: 12.5,
+                badge: "【間接押出】STEP 3 / 4：押出（壁との摩擦ゼロ！）",
+                analogy: "💡 銅が筒の中で滑らない！摩擦がないので少ない力（約1,900トン）でOK",
+                caption: "銅は動かず、型と中空ステムが銅の中へ押し込まれます！銅製品は中空ステムの穴を通って出てくるため、壁との摩擦が起きず高品質です。"
+            },
+            {
+                id: 3,
+                start: 12.5,
+                end: 16.0,
+                badge: "【間接押出】STEP 4 / 4：冷却・完成",
+                analogy: "💡 摩擦熱やムラが少なく、精度の高い銅製品が作れるのが強み！",
+                caption: "摩擦がないため必要な圧力が小さく、表面のムラも少ない高品質な銅製品が完成します。設備は複雑ですが精密な製品に最適です。"
+            }
+        ];
+
+        function getActiveSteps() {
+            return extrusionMode === 'direct' ? STEPS_DIRECT : STEPS_INDIRECT;
+        }
+
+        // 色の定義
+        const COLOR_COPPER_COLD = new THREE.Color(0xd97a43);
+        const COLOR_COPPER_HOT = new THREE.Color(0xff5511);
+        const COLOR_EMISSIVE_COLD = new THREE.Color(0x000000);
+        const COLOR_EMISSIVE_HOT = new THREE.Color(0xff3300);
+
+        // ==========================================
+        // 2. Three.js シーン初期化
+        // ==========================================
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.025);
+
+            camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+            updateCameraPosition();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.15;
+            container.appendChild(renderer.domElement);
+
+            // ライティング設定
+            const ambientLight = new THREE.AmbientLight(0xcbd5e1, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.3);
+            dirLight.position.set(8, 14, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+            rimLight.position.set(-10, 6, -8);
+            scene.add(rimLight);
+
+            const warmLight = new THREE.PointLight(0xff6600, 1.5, 12);
+            warmLight.position.set(-1.0, 1.5, 2.5);
+            scene.add(warmLight);
+
+            // 工場フロア（グリッド＋床面）
+            buildEnvironment();
+
+            // 押出プレス装置の各パーツを構築
+            buildMachineBase();
+            buildContainer();
+            buildDieAssembly();
+            buildStemAssembly();
+            buildIndirectComponents();
+            buildHeaterCoils();
+            buildCopperBillet();
+            buildExtrudedProduct();
+            buildHeatParticles();
+
+            // イベントリスナー登録
+            setupInteractionEvents(renderer.domElement);
+            window.addEventListener('resize', onWindowResize);
+
+            // タイムラインスライダー操作
+            const slider = document.getElementById('timeline-slider');
+            slider.addEventListener('input', (e) => {
+                const ratio = parseFloat(e.target.value) / 1000;
+                currentTime = ratio * TOTAL_DURATION;
+                updateSimulation(currentTime);
+            });
+        }
+
+        // ==========================================
+        // 3. 3Dモデルの構築関数群
+        // ==========================================
+        function buildEnvironment() {
+            const floorGeo = new THREE.PlaneGeometry(60, 60);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                roughness: 0.85,
+                metalness: 0.2
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -2.3;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const grid = new THREE.GridHelper(40, 40, 0x334155, 0x1e293b);
+            grid.position.y = -2.29;
+            scene.add(grid);
+        }
+
+        // 土台・ランアウトテーブル（押し出された製品が乗るローラー台）
+        function buildMachineBase() {
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.6 });
+            const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5, metalness: 0.7 });
+
+            // メイン架台
+            const mainBase = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.7, 3.2), baseMat);
+            mainBase.position.set(-1.5, -1.95, 0);
+            mainBase.receiveShadow = true;
+            scene.add(mainBase);
+
+            // 油圧プレス側ハウジング（左端）
+            const pressHousing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 3.4, 2.8), darkSteelMat);
+            pressHousing.position.set(-7.2, -0.6, 0);
+            pressHousing.castShadow = true;
+            scene.add(pressHousing);
+
+            // ランアウトテーブル（右側のローラーコンベア）
+            const tableBeam = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.35, 1.4), darkSteelMat);
+            tableBeam.position.set(5.4, -1.15, 0);
+            scene.add(tableBeam);
+
+            // ローラーを等間隔に配置
+            const rollerGeo = new THREE.CylinderGeometry(0.16, 0.16, 1.5, 16);
+            const rollerMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.8 });
+            for (let i = 0; i < 10; i++) {
+                const roller = new THREE.Mesh(rollerGeo, rollerMat);
+                roller.rotation.x = Math.PI / 2;
+                roller.position.set(1.6 + i * 0.85, -0.82, 0);
+                scene.add(roller);
+            }
+
+            // テーブル脚
+            const legGeo = new THREE.BoxGeometry(0.25, 1.2, 1.2);
+            [2.0, 5.4, 8.8].forEach(xPos => {
+                const leg = new THREE.Mesh(legGeo, baseMat);
+                leg.position.set(xPos, -1.7, 0);
+                scene.add(leg);
+            });
+        }
+
+        // コンテナ（ビレットを入れる頑丈な筒：断面カット版とフル版を用意）
+        function buildContainer() {
+            const length = 3.2;
+            const outerR = 1.45;
+            const innerR = 0.92;
+
+            // 中空の半円筒（断面カット表示用：奥側だけを描画して手前から中が見えるようにする）
+            const cutShape = new THREE.Shape();
+            // 奥側（-Z方向、XZ平面上の角度で調整）を作るため、2D形状をXYで作ってY軸回転
+            cutShape.absarc(0, 0, outerR, 0, Math.PI, false);
+            cutShape.lineTo(-innerR, 0);
+            cutShape.absarc(0, 0, innerR, Math.PI, 0, true);
+            cutShape.closePath();
+
+            const extrudeSettings = {
+                depth: length,
+                bevelEnabled: false,
+                curveSegments: 32
+            };
+
+            const cutGeo = new THREE.ExtrudeGeometry(cutShape, extrudeSettings);
+            // X軸方向に沿うように回転（開口部が手前+Zに向くように調整）
+            cutGeo.rotateY(Math.PI / 2);
+            cutGeo.rotateX(-Math.PI / 2);
+
+            const outerMat = new THREE.MeshStandardMaterial({
+                color: 0x475569,
+                roughness: 0.45,
+                metalness: 0.75
+            });
+
+            containerOuterCut = new THREE.Mesh(cutGeo, outerMat);
+            containerOuterCut.position.set(-2.6, 0, 0);
+            containerOuterCut.castShadow = true;
+            containerOuterCut.receiveShadow = true;
+            scene.add(containerOuterCut);
+
+            // 断面の切り口を強調するハイライトリング（わかりやすさ向上）
+            const cutFaceMat = new THREE.MeshStandardMaterial({
+                color: 0x94a3b8,
+                roughness: 0.3,
+                metalness: 0.85
+            });
+            const cutEdgeTop = new THREE.Mesh(new THREE.BoxGeometry(length, 0.53, 0.04), cutFaceMat);
+            cutEdgeTop.position.set(-1.0, 1.185, 0.01);
+            containerOuterCut.add(cutEdgeTop);
+
+            const cutEdgeBottom = new THREE.Mesh(new THREE.BoxGeometry(length, 0.53, 0.04), cutFaceMat);
+            cutEdgeBottom.position.set(-1.0, -1.185, 0.01);
+            containerOuterCut.add(cutEdgeBottom);
+
+            // フル表示用（半透明の円筒）
+            const fullShape = new THREE.Shape();
+            fullShape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+            const holePath = new THREE.Path();
+            holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+            fullShape.holes.push(holePath);
+
+            const fullGeo = new THREE.ExtrudeGeometry(fullShape, extrudeSettings);
+            fullGeo.rotateY(Math.PI / 2);
+
+            const fullMat = new THREE.MeshStandardMaterial({
+                color: 0x64748b,
+                roughness: 0.3,
+                metalness: 0.7,
+                transparent: true,
+                opacity: 0.42,
+                depthWrite: false
+            });
+            containerOuterFull = new THREE.Mesh(fullGeo, fullMat);
+            containerOuterFull.position.set(-2.6, 0, 0);
+            containerOuterFull.visible = false;
+            scene.add(containerOuterFull);
+
+            // 押出時の圧力発光エフェクト（コンテナ内のダイス直前）
+            const glowGeo = new THREE.CylinderGeometry(0.88, 0.35, 0.45, 24);
+            glowGeo.rotateZ(-Math.PI / 2);
+            pressureGlowMat = new THREE.MeshBasicMaterial({
+                color: 0xffaa00,
+                transparent: true,
+                opacity: 0.0
+            });
+            pressureGlowMesh = new THREE.Mesh(glowGeo, pressureGlowMat);
+            pressureGlowMesh.position.set(0.38, 0, 0);
+            scene.add(pressureGlowMesh);
+
+            // 直接押出時の「壁との摩擦」を視覚化する赤いリングエフェクト
+            const frictionGeo = new THREE.CylinderGeometry(0.905, 0.905, 2.55, 28, 1, true);
+            frictionGeo.rotateZ(Math.PI / 2);
+            frictionGeo.translate(-1.275, 0, 0);
+            frictionGlowMat = new THREE.MeshBasicMaterial({
+                color: 0xf43f5e,
+                transparent: true,
+                opacity: 0.0,
+                side: THREE.DoubleSide
+            });
+            frictionGlowMesh = new THREE.Mesh(frictionGeo, frictionGlowMat);
+            scene.add(frictionGlowMesh);
+        }
+
+        // ダイス（金型）の構築
+        function buildDieAssembly() {
+            dieGroup = new THREE.Group();
+            dieGroup.position.set(0.6, 0, 0);
+            scene.add(dieGroup);
+
+            rebuildDieMesh();
+        }
+
+        // 選択した形状・押出方式に合わせてダイスの穴と外径を再生成
+        function rebuildDieMesh() {
+            while (dieGroup.children.length > 0) {
+                dieGroup.remove(dieGroup.children[0]);
+            }
+
+            // 間接押出時はコンテナ内（内径0.92）に入り込むため外径を0.89にする
+            const outerRadius = extrusionMode === 'indirect' ? 0.89 : 1.48;
+            const dieShape = new THREE.Shape();
+            dieShape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
+
+            // 穴のパスを作成
+            const hole = new THREE.Path();
+            if (currentDieShape === 'round') {
+                hole.absarc(0, 0, 0.32, 0, Math.PI * 2, true);
+            } else if (currentDieShape === 'hex') {
+                const r = 0.36;
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) hole.moveTo(x, y);
+                    else hole.lineTo(x, y);
+                }
+                hole.closePath();
+            } else if (currentDieShape === 'square') {
+                const s = 0.30;
+                hole.moveTo(-s, -s);
+                hole.lineTo(s, -s);
+                hole.lineTo(s, s);
+                hole.lineTo(-s, s);
+                hole.closePath();
+            }
+            dieShape.holes.push(hole);
+
+            const dieGeo = new THREE.ExtrudeGeometry(dieShape, {
+                depth: 0.48,
+                bevelEnabled: true,
+                bevelThickness: 0.03,
+                bevelSize: 0.03,
+                bevelSegments: 2,
+                curveSegments: 32
+            });
+            dieGeo.rotateY(Math.PI / 2);
+
+            const dieMat = new THREE.MeshStandardMaterial({
+                color: 0xd97706, // 金型がわかりやすいよう真鍮・工具鋼風のゴールド系
+                roughness: 0.3,
+                metalness: 0.85
+            });
+
+            const dieMesh = new THREE.Mesh(dieGeo, dieMat);
+            dieMesh.castShadow = true;
+            dieGroup.add(dieMesh);
+        }
+
+        // ステム（押し棒）とダミーブロック
+        function buildStemAssembly() {
+            stemGroup = new THREE.Group();
+            scene.add(stemGroup);
+
+            // メインの押し棒（ステム）
+            const stemGeo = new THREE.CylinderGeometry(0.62, 0.62, 5.2, 24);
+            stemGeo.rotateZ(Math.PI / 2);
+            const stemMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                roughness: 0.25,
+                metalness: 0.85
+            });
+            const stemMesh = new THREE.Mesh(stemGeo, stemMat);
+            stemMesh.position.set(-2.85, 0, 0);
+            stemMesh.castShadow = true;
+            stemGroup.add(stemMesh);
+
+            // ダミーブロック（ビレットを直接押す先端の円盤）
+            const dummyGeo = new THREE.CylinderGeometry(0.89, 0.89, 0.36, 28);
+            dummyGeo.rotateZ(Math.PI / 2);
+            const dummyMat = new THREE.MeshStandardMaterial({
+                color: 0xe2e8f0,
+                roughness: 0.3,
+                metalness: 0.9
+            });
+            dummyBlockMesh = new THREE.Mesh(dummyGeo, dummyMat);
+            dummyBlockMesh.position.set(-0.18, 0, 0);
+            stemGroup.add(dummyBlockMesh);
+        }
+
+        // 間接押出専用パーツ（中空ステム＆左端の密閉フタ）
+        function buildIndirectComponents() {
+            // 1. 左端の密閉フタ（クロージングブロック）
+            const blockGeo = new THREE.CylinderGeometry(0.91, 0.91, 0.65, 28);
+            blockGeo.rotateZ(Math.PI / 2);
+            const blockMat = new THREE.MeshStandardMaterial({
+                color: 0x64748b,
+                roughness: 0.35,
+                metalness: 0.85
+            });
+            closingBlockMesh = new THREE.Mesh(blockGeo, blockMat);
+            closingBlockMesh.position.set(-2.35, 0, 0);
+            closingBlockMesh.visible = false;
+            scene.add(closingBlockMesh);
+
+            // 2. 中空ステム（ダイスの右側に接続され、製品が中を通り抜ける太いパイプ）
+            hollowStemGroup = new THREE.Group();
+            const hLen = 4.2;
+            const hOuter = 0.86;
+            const hInner = 0.50;
+            const extrudeOpts = { depth: hLen, bevelEnabled: false, curveSegments: 28 };
+
+            // 断面カット版（中を通る製品が見えるように奥半分を描画）
+            const hCutShape = new THREE.Shape();
+            hCutShape.absarc(0, 0, hOuter, 0, Math.PI, false);
+            hCutShape.lineTo(-hInner, 0);
+            hCutShape.absarc(0, 0, hInner, Math.PI, 0, true);
+            hCutShape.closePath();
+
+            const hCutGeo = new THREE.ExtrudeGeometry(hCutShape, extrudeOpts);
+            hCutGeo.rotateY(Math.PI / 2);
+            hCutGeo.rotateX(-Math.PI / 2);
+
+            const hMat = new THREE.MeshStandardMaterial({
+                color: 0x0ea5e9,
+                roughness: 0.25,
+                metalness: 0.8
+            });
+            hollowStemCut = new THREE.Mesh(hCutGeo, hMat);
+            hollowStemGroup.add(hollowStemCut);
+
+            // 透過フル版
+            const hFullShape = new THREE.Shape();
+            hFullShape.absarc(0, 0, hOuter, 0, Math.PI * 2, false);
+            const hHole = new THREE.Path();
+            hHole.absarc(0, 0, hInner, 0, Math.PI * 2, true);
+            hFullShape.holes.push(hHole);
+
+            const hFullGeo = new THREE.ExtrudeGeometry(hFullShape, extrudeOpts);
+            hFullGeo.rotateY(Math.PI / 2);
+
+            const hFullMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                roughness: 0.25,
+                metalness: 0.75,
+                transparent: true,
+                opacity: 0.38,
+                depthWrite: false
+            });
+            hollowStemFull = new THREE.Mesh(hFullGeo, hFullMat);
+            hollowStemFull.visible = false;
+            hollowStemGroup.add(hollowStemFull);
+
+            hollowStemGroup.visible = false;
+            scene.add(hollowStemGroup);
+        }
+
+        // 誘導加熱コイル（ステップ1の加熱演出用）
+        function buildHeaterCoils() {
+            heaterGroup = new THREE.Group();
+            const coilMat = new THREE.MeshStandardMaterial({
+                color: 0x94a3b8,
+                emissive: 0xff3300,
+                emissiveIntensity: 0,
+                roughness: 0.3,
+                metalness: 0.8
+            });
+
+            for (let i = 0; i < 5; i++) {
+                const ringGeo = new THREE.TorusGeometry(1.18, 0.08, 12, 32);
+                ringGeo.rotateY(Math.PI / 2);
+                const ring = new THREE.Mesh(ringGeo, coilMat);
+                ring.position.set(-4.8 + i * 0.45, 0, 0);
+                heaterGroup.add(ring);
+                heaterRings.push(ring);
+            }
+            scene.add(heaterGroup);
+        }
+
+        // 銅ビレット（材料となる太い銅の円柱）
+        function buildCopperBillet() {
+            // 原点を右端（ダイス側）に揃えると、scale.x で左から右へ縮む表現が非常に綺麗になる
+            const geo = new THREE.CylinderGeometry(0.88, 0.88, 2.6, 32);
+            geo.rotateZ(Math.PI / 2);
+            geo.translate(-1.3, 0, 0); // 右端が x=0、左端が x=-2.6
+
+            billetMat = new THREE.MeshStandardMaterial({
+                color: COLOR_COPPER_COLD.clone(),
+                emissive: COLOR_EMISSIVE_COLD.clone(),
+                emissiveIntensity: 0.0,
+                roughness: 0.32,
+                metalness: 0.85
+            });
+
+            billetMesh = new THREE.Mesh(geo, billetMat);
+            billetMesh.castShadow = true;
+            scene.add(billetMesh);
+        }
+
+        // ダイスから押し出される銅製品
+        function buildExtrudedProduct() {
+            productMat = new THREE.MeshStandardMaterial({
+                color: COLOR_COPPER_HOT.clone(),
+                emissive: COLOR_EMISSIVE_HOT.clone(),
+                emissiveIntensity: 0.8,
+                roughness: 0.28,
+                metalness: 0.88
+            });
+
+            rebuildProductMesh();
+        }
+
+        // 選択した形状に合わせて製品メッシュを再生成（左端 x=0 から +X 方向に長さ1.0の基準メッシュ）
+        function rebuildProductMesh() {
+            if (productMesh) {
+                scene.remove(productMesh);
+                productMesh.geometry.dispose();
+            }
+
+            let geo;
+            if (currentDieShape === 'round') {
+                geo = new THREE.CylinderGeometry(0.31, 0.31, 1.0, 24);
+                geo.rotateZ(-Math.PI / 2);
+                geo.translate(0.5, 0, 0);
+            } else if (currentDieShape === 'hex') {
+                geo = new THREE.CylinderGeometry(0.35, 0.35, 1.0, 6);
+                geo.rotateZ(-Math.PI / 2);
+                geo.translate(0.5, 0, 0);
+            } else {
+                geo = new THREE.BoxGeometry(1.0, 0.58, 0.58);
+                geo.translate(0.5, 0, 0);
+            }
+
+            productMesh = new THREE.Mesh(geo, productMat);
+            productMesh.position.set(0.85, 0, 0);
+            productMesh.scale.set(0.001, 1, 1);
+            productMesh.castShadow = true;
+            scene.add(productMesh);
+        }
+
+        // 熱気・ゆらめきパーティクル
+        function buildHeatParticles() {
+            const count = 70;
+            const geo = new THREE.BufferGeometry();
+            heatPositions = new Float32Array(count * 3);
+            heatVelocities = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+                heatPositions[i * 3] = (Math.random() - 0.5) * 6;
+                heatPositions[i * 3 + 1] = (Math.random() - 0.5) * 2;
+                heatPositions[i * 3 + 2] = (Math.random() - 0.5) * 2;
+                heatVelocities[i] = 0.015 + Math.random() * 0.025;
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(heatPositions, 3));
+
+            const mat = new THREE.PointsMaterial({
+                color: 0xff7722,
+                size: 0.14,
+                transparent: true,
+                opacity: 0.55,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            heatParticles = new THREE.Points(geo, mat);
+            scene.add(heatParticles);
+        }
+
+        // ==========================================
+        // 4. シミュレーション更新ロジック（時間 t に応じた状態計算）
+        // ==========================================
+        function smoothstep(edge0, edge1, x) {
+            const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+            return t * t * (3 - 2 * t);
+        }
+
+        function updateSimulation(t) {
+            // スライダーの同期
+            const slider = document.getElementById('timeline-slider');
+            if (slider) {
+                slider.value = Math.round((t / TOTAL_DURATION) * 1000);
+            }
+
+            let tempC = 25;
+            let pressureTon = 0;
+            let heatIntensity = 0; // 0(冷) 〜 1(赤熱)
+            let productHeat = 0;
+            let frictionActive = 0;
+
+            const isDirect = extrusionMode === 'direct';
+
+            // モード別の専用パーツ表示切替
+            stemGroup.visible = isDirect;
+            hollowStemGroup.visible = !isDirect;
+            hollowStemCut.visible = !isDirect && isCutaway;
+            hollowStemFull.visible = !isDirect && !isCutaway;
+            closingBlockMesh.visible = !isDirect;
+
+            // --- STEP 1: 加熱 (0.0s 〜 3.5s) ---
+            if (t < 3.5) {
+                const p = smoothstep(0.0, 3.2, t);
+                tempC = 25 + p * 825; // 25℃ -> 850℃
+                heatIntensity = p;
+
+                // ビレットは左側の加熱エリア（誘導コイルの中）にある
+                billetMesh.position.set(-2.6, 0, 0);
+                billetMesh.scale.set(1, 1, 1);
+
+                // 誘導加熱コイルを表示＆赤く発光
+                heaterGroup.visible = true;
+                heaterGroup.position.set(0, 0, 0);
+                heaterRings[0].material.emissiveIntensity = Math.sin(t * 6) * 0.3 + 0.9 * p;
+
+                if (isDirect) {
+                    stemGroup.position.set(-5.6, 0, 0);
+                    dieGroup.position.set(0.6, 0, 0);
+                } else {
+                    closingBlockMesh.position.set(-5.6, 0, 0);
+                    dieGroup.position.set(1.8, 0, 0);
+                    hollowStemGroup.position.set(2.28, 0, 0);
+                }
+
+                // 製品はまだ出ていない
+                productMesh.visible = false;
+                productMesh.scale.set(0.001, 1, 1);
+                pressureGlowMat.opacity = 0;
+                frictionActive = 0;
+            }
+            // --- STEP 2: 装填 (3.5s 〜 6.0s) ---
+            else if (t < 6.0) {
+                const pCoil = smoothstep(3.5, 4.2, t);
+                const pLoad = smoothstep(4.0, 5.4, t);
+                const pStem = smoothstep(5.0, 5.9, t);
+
+                tempC = 850;
+                heatIntensity = 1.0;
+
+                // 加熱コイルが上に退避
+                heaterGroup.visible = pCoil < 0.99;
+                heaterGroup.position.set(0, pCoil * 4.5, 0);
+
+                // ビレットがコンテナ内（右端 x = 0.58、左端 x = -2.02）へスライド装填
+                billetMesh.position.set(-2.6 + pLoad * 3.18, 0, 0);
+                billetMesh.scale.set(1, 1, 1);
+
+                if (isDirect) {
+                    // 直接押出：ステムがビレットの後ろ（x = -2.02）に密着、ダイスは固定
+                    stemGroup.position.set(-5.6 + pStem * 3.58, 0, 0);
+                    dieGroup.position.set(0.6, 0, 0);
+                } else {
+                    // 間接押出：左端を密閉フタでロック、右からダイス＋中空ステムが密着
+                    closingBlockMesh.position.set(-5.6 + pStem * 3.25, 0, 0); // 右端が -2.025 に到達
+                    const dieX = 1.8 - pStem * 1.2; // 1.8 -> 0.6
+                    dieGroup.position.set(dieX, 0, 0);
+                    hollowStemGroup.position.set(dieX + 0.48, 0, 0);
+                }
+
+                productMesh.visible = false;
+                productMesh.scale.set(0.001, 1, 1);
+                pressureGlowMat.opacity = 0;
+                frictionActive = 0;
+            }
+            // --- STEP 3: 押出 (6.0s 〜 12.5s) ---
+            else if (t < 12.5) {
+                const p = smoothstep(6.0, 12.2, t);
+                const pRamp = smoothstep(6.0, 6.6, t);
+                const pDrop = 1.0 - smoothstep(11.9, 12.4, t);
+
+                const billetScale = 1.0 - p * 0.86;
+                heatIntensity = 1.0;
+                productHeat = 0.95 - p * 0.25;
+                heaterGroup.visible = false;
+
+                if (isDirect) {
+                    // 【直接押出】ビレット全体がコンテナ内を右へ滑る（摩擦あり・高圧）
+                    tempC = 850 + Math.sin(p * Math.PI) * 35; // 摩擦発熱が大きい
+                    pressureTon = Math.round(2800 * pRamp * pDrop); // 最大2,800トン
+
+                    billetMesh.position.set(0.58, 0, 0);
+                    billetMesh.scale.set(billetScale, 1, 1);
+
+                    const billetLeftX = 0.58 - (2.6 * billetScale);
+                    stemGroup.position.set(billetLeftX, 0, 0);
+                    dieGroup.position.set(0.6, 0, 0);
+
+                    productMesh.position.set(0.85, 0, 0);
+                    productMesh.visible = p > 0.005;
+                    productMesh.scale.set(Math.max(0.01, p * 8.2), 1, 1);
+
+                    pressureGlowMesh.position.set(0.38, 0, 0);
+                    pressureGlowMat.opacity = 0.45 * pRamp * pDrop;
+
+                    // 摩擦エフェクト（コンテナ内壁との擦れ）
+                    frictionActive = pRamp * pDrop;
+                    frictionGlowMesh.position.set(0.58, 0, 0);
+                    frictionGlowMesh.scale.set(billetScale, 1, 1);
+                } else {
+                    // 【間接押出】ビレット左端は固定！右からダイス＋中空ステムが押し込む（摩擦なし・省エネ）
+                    tempC = 850 + Math.sin(p * Math.PI) * 12; // 摩擦がないため温度上昇が穏やか
+                    pressureTon = Math.round(1900 * pRamp * pDrop); // 最大1,900トン（約30%低減）
+
+                    // 左端 x = -2.02 を固定したまま、右端が左へ縮む
+                    const billetRightX = -2.02 + (2.6 * billetScale);
+                    billetMesh.position.set(billetRightX, 0, 0);
+                    billetMesh.scale.set(billetScale, 1, 1);
+
+                    // 左端の密閉フタは動かない
+                    closingBlockMesh.position.set(-2.35, 0, 0);
+
+                    // ダイスと中空ステムがビレット右端を追って左へ押し込まれる
+                    const dieX = billetRightX + 0.02;
+                    dieGroup.position.set(dieX, 0, 0);
+                    hollowStemGroup.position.set(dieX + 0.48, 0, 0);
+
+                    // 銅製品はダイスの穴から中空ステムの内部を通り抜けて右へ長く伸びる
+                    productMesh.position.set(dieX + 0.25, 0, 0);
+                    productMesh.visible = p > 0.005;
+                    productMesh.scale.set(Math.max(0.01, p * 9.5), 1, 1);
+
+                    pressureGlowMesh.position.set(billetRightX - 0.2, 0, 0);
+                    pressureGlowMat.opacity = 0.35 * pRamp * pDrop;
+                    frictionActive = 0; // 壁との摩擦なし！
+                }
+            }
+            // --- STEP 4: 冷却・完成 (12.5s 〜 16.0s) ---
+            else {
+                const p = smoothstep(12.5, 15.5, t);
+                tempC = 850 - p * 770; // 850℃ -> 80℃へ冷却
+                pressureTon = 0;
+                heatIntensity = 1.0 - p;
+                productHeat = 0.7 * (1.0 - p);
+                frictionActive = 0;
+
+                heaterGroup.visible = false;
+                pressureGlowMat.opacity = 0;
+
+                const retract = smoothstep(12.5, 13.8, t);
+                if (isDirect) {
+                    billetMesh.position.set(0.58, 0, 0);
+                    billetMesh.scale.set(0.14, 1, 1);
+                    stemGroup.position.set((0.58 - 2.6 * 0.14) - retract * 2.2, 0, 0);
+                    dieGroup.position.set(0.6, 0, 0);
+                    productMesh.position.set(0.85, 0, 0);
+                    productMesh.visible = true;
+                    productMesh.scale.set(8.2, 1, 1);
+                } else {
+                    const finalRightX = -2.02 + (2.6 * 0.14);
+                    billetMesh.position.set(finalRightX, 0, 0);
+                    billetMesh.scale.set(0.14, 1, 1);
+                    closingBlockMesh.position.set(-2.35, 0, 0);
+
+                    // ダイスと中空ステムが少し右へ戻る
+                    const dieX = finalRightX + 0.02 + retract * 1.4;
+                    dieGroup.position.set(dieX, 0, 0);
+                    hollowStemGroup.position.set(dieX + 0.48, 0, 0);
+
+                    productMesh.position.set(finalRightX + 0.27, 0, 0);
+                    productMesh.visible = true;
+                    productMesh.scale.set(9.5, 1, 1);
+                }
+            }
+
+            // 摩擦発光エフェクトの点滅更新
+            frictionGlowMat.opacity = frictionActive * (0.28 + Math.sin(t * 14) * 0.12);
+
+            // マテリアル色の更新（温度に応じた赤熱〜銅光沢）
+            billetMat.color.copy(COLOR_COPPER_COLD).lerp(COLOR_COPPER_HOT, heatIntensity);
+            billetMat.emissive.copy(COLOR_EMISSIVE_COLD).lerp(COLOR_EMISSIVE_HOT, heatIntensity);
+            billetMat.emissiveIntensity = heatIntensity * 1.1;
+            billetMat.roughness = 0.28 + heatIntensity * 0.25;
+
+            productMat.color.copy(COLOR_COPPER_COLD).lerp(COLOR_COPPER_HOT, productHeat);
+            productMat.emissive.copy(COLOR_EMISSIVE_COLD).lerp(COLOR_EMISSIVE_HOT, productHeat);
+            productMat.emissiveIntensity = productHeat * 1.05;
+            productMat.roughness = 0.22 + productHeat * 0.25;
+
+            // 熱気パーティクルの更新
+            updateHeatParticles(heatIntensity, productHeat, t);
+
+            // HUD・字幕の更新
+            updateHUD(tempC, pressureTon, t);
+        }
+
+        function updateHeatParticles(billetHeat, prodHeat, t) {
+            const activeHeat = Math.max(billetHeat, prodHeat);
+            heatParticles.material.opacity = activeHeat * 0.55;
+
+            if (activeHeat <= 0.05) return;
+
+            const posAttr = heatParticles.geometry.attributes.position;
+            const arr = posAttr.array;
+            for (let i = 0; i < heatVelocities.length; i++) {
+                arr[i * 3 + 1] += heatVelocities[i];
+                // 上に昇りきったらビレットや製品付近から再発生
+                if (arr[i * 3 + 1] > 2.4) {
+                    const isOnProduct = productMesh.visible && Math.random() > 0.45;
+                    if (isOnProduct) {
+                        arr[i * 3] = 0.9 + Math.random() * productMesh.scale.x;
+                        arr[i * 3 + 1] = -0.2 + Math.random() * 0.4;
+                        arr[i * 3 + 2] = (Math.random() - 0.5) * 0.7;
+                    } else {
+                        arr[i * 3] = billetMesh.position.x - Math.random() * (2.6 * billetMesh.scale.x);
+                        arr[i * 3 + 1] = -0.5 + Math.random() * 1.0;
+                        arr[i * 3 + 2] = (Math.random() - 0.5) * 1.6;
+                    }
+                }
+            }
+            posAttr.needsUpdate = true;
+        }
+
+        // HUD数値とステップ字幕の更新
+        let lastActiveStepId = -1;
+        let lastRenderedMode = '';
+        function updateHUD(tempC, pressureTon, t) {
+            document.getElementById('hud-temp').textContent = Math.round(tempC);
+            document.getElementById('hud-pressure').textContent = pressureTon.toLocaleString();
+
+            const steps = getActiveSteps();
+            // 現在のステップを判定
+            let activeStep = steps[0];
+            for (let i = 0; i < steps.length; i++) {
+                if (t >= steps[i].start && t <= steps[i].end) {
+                    activeStep = steps[i];
+                    break;
+                }
+            }
+
+            if (activeStep.id !== lastActiveStepId || extrusionMode !== lastRenderedMode) {
+                lastActiveStepId = activeStep.id;
+                lastRenderedMode = extrusionMode;
+                document.getElementById('step-badge').textContent = activeStep.badge;
+                document.getElementById('step-analogy').textContent = activeStep.analogy;
+                document.getElementById('step-caption').textContent = activeStep.caption;
+
+                // 摩擦ステータス表示の更新
+                const frictionEl = document.getElementById('hud-friction');
+                if (frictionEl) {
+                    if (extrusionMode === 'direct') {
+                        frictionEl.textContent = "あり（高圧必要）";
+                        frictionEl.className = "text-xs font-bold text-rose-400 mt-0.5";
+                    } else {
+                        frictionEl.textContent = "なし（省エネ・高品質）";
+                        frictionEl.className = "text-xs font-bold text-emerald-400 mt-0.5";
+                    }
+                }
+
+                // ナビゲーションボタンのハイライト更新
+                for (let i = 0; i < 4; i++) {
+                    const btn = document.getElementById(`nav-step-${i}`);
+                    if (i === activeStep.id) {
+                        btn.className = "step-nav-btn py-1 rounded-lg font-bold text-center transition-colors bg-orange-500/30 text-orange-200 border border-orange-500/40";
+                    } else {
+                        btn.className = "step-nav-btn py-1 rounded-lg font-bold text-center transition-colors text-slate-400 hover:text-white hover:bg-slate-800";
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 5. 3D空間ラベルの画面投影更新
+        // ==========================================
+        const tempVec = new THREE.Vector3();
+        function updateLabels3D() {
+            const layer = document.getElementById('labels-layer');
+            if (!showLabels) {
+                layer.style.display = 'none';
+                return;
+            }
+            layer.style.display = 'block';
+
+            const isDirect = extrusionMode === 'direct';
+            const billetCenterX = billetMesh.position.x - (1.3 * billetMesh.scale.x);
+            const productCenterX = productMesh.position.x + Math.min(productMesh.scale.x * 0.5, 4.2);
+
+            // モードに応じてラベルテキストを更新
+            document.getElementById('label-stem-text').textContent = isDirect ? "ステム（押し棒）" : "中空ステム（穴あき押し棒）";
+            document.getElementById('label-die-text').textContent = isDirect ? "ダイス（固定された型）" : "ダイス（押し込まれる型）";
+
+            const isExtruding = currentTime >= 6.2 && currentTime <= 12.2;
+            const frictionTextEl = document.getElementById('label-friction-text');
+            if (isDirect) {
+                frictionTextEl.textContent = "🔥 壁との摩擦あり（抵抗大）";
+                frictionTextEl.className = "bg-rose-950/90 border border-rose-400/80 text-rose-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg";
+            } else {
+                frictionTextEl.textContent = "✨ ビレット静止・摩擦ゼロ！";
+                frictionTextEl.className = "bg-emerald-950/90 border border-emerald-400/80 text-emerald-200 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg";
+            }
+
+            const stemPos = isDirect
+                ? new THREE.Vector3(stemGroup.position.x - 1.5, 0.9, 0)
+                : new THREE.Vector3(hollowStemGroup.position.x + 2.1, 1.1, 0);
+
+            const labelTargets = [
+                { id: 'label-stem', pos: stemPos, visible: true },
+                { id: 'label-billet', pos: new THREE.Vector3(billetCenterX, 1.15, 0), visible: true },
+                { id: 'label-container', pos: new THREE.Vector3(-1.0, 1.7, 0), visible: true },
+                { id: 'label-die', pos: new THREE.Vector3(dieGroup.position.x + 0.25, 1.55, 0), visible: true },
+                { id: 'label-product', pos: new THREE.Vector3(productCenterX, 0.65, 0), visible: productMesh.visible && productMesh.scale.x > 0.6 },
+                { id: 'label-friction', pos: new THREE.Vector3(billetCenterX, -1.05, 0.5), visible: isExtruding }
+            ];
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            labelTargets.forEach(item => {
+                const el = document.getElementById(item.id);
+                if (!item.visible) {
+                    el.style.opacity = '0';
+                    return;
+                }
+                tempVec.copy(item.pos).project(camera);
+                // カメラの後ろにある場合は非表示
+                if (tempVec.z > 1) {
+                    el.style.opacity = '0';
+                    return;
+                }
+                const x = (tempVec.x * 0.5 + 0.5) * w;
+                const y = (-tempVec.y * 0.5 + 0.5) * h;
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                el.style.opacity = '1';
+            });
+        }
+
+        // ==========================================
+        // 6. カメラ操作（マウス・タッチ両対応）
+        // ==========================================
+        function updateCameraPosition() {
+            const r = camSpherical.radius;
+            const phi = camSpherical.phi;
+            const theta = camSpherical.theta;
+
+            camera.position.x = cameraTarget.x + r * Math.sin(phi) * Math.sin(theta);
+            camera.position.y = cameraTarget.y + r * Math.cos(phi);
+            camera.position.z = cameraTarget.z + r * Math.sin(phi) * Math.cos(theta);
+            camera.lookAt(cameraTarget);
+        }
+
+        function setupInteractionEvents(domElement) {
+            // マウス操作
+            domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                prevPointer = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - prevPointer.x;
+                const dy = e.clientY - prevPointer.y;
+                prevPointer = { x: e.clientX, y: e.clientY };
+
+                camSpherical.theta -= dx * 0.007;
+                camSpherical.phi = Math.max(0.25, Math.min(Math.PI / 2 + 0.2, camSpherical.phi - dy * 0.007));
+                updateCameraPosition();
+            });
+
+            // ホイールズーム
+            domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                camSpherical.radius = Math.max(6.5, Math.min(24.0, camSpherical.radius + e.deltaY * 0.01));
+                updateCameraPosition();
+            }, { passive: false });
+
+            // タッチ操作（1本指回転・2本指ピンチズーム）
+            domElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    prevPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    prevPinchDist = Math.hypot(dx, dy);
+                }
+            }, { passive: false });
+
+            domElement.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1 && isDragging) {
+                    const dx = e.touches[0].clientX - prevPointer.x;
+                    const dy = e.touches[0].clientY - prevPointer.y;
+                    prevPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+                    camSpherical.theta -= dx * 0.008;
+                    camSpherical.phi = Math.max(0.25, Math.min(Math.PI / 2 + 0.2, camSpherical.phi - dy * 0.008));
+                    updateCameraPosition();
+                } else if (e.touches.length === 2 && prevPinchDist !== null) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const dist = Math.hypot(dx, dy);
+                    const delta = prevPinchDist - dist;
+                    prevPinchDist = dist;
+
+                    camSpherical.radius = Math.max(6.5, Math.min(24.0, camSpherical.radius + delta * 0.03));
+                    updateCameraPosition();
+                }
+            }, { passive: false });
+
+            domElement.addEventListener('touchend', () => {
+                isDragging = false;
+                prevPinchDist = null;
+            });
+        }
+
+        // ==========================================
+        // 7. UI操作ハンドラ
+        // ==========================================
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            document.getElementById('icon-pause').classList.toggle('hidden', !isPlaying);
+            document.getElementById('icon-play').classList.toggle('hidden', isPlaying);
+        }
+
+        function replayAnimation() {
+            currentTime = 0;
+            if (!isPlaying) togglePlay();
+            updateSimulation(currentTime);
+        }
+
+        function jumpToStep(stepIndex) {
+            currentTime = getActiveSteps()[stepIndex].start + 0.05;
+            updateSimulation(currentTime);
+        }
+
+        function setExtrusionMode(mode) {
+            if (extrusionMode === mode) return;
+            extrusionMode = mode;
+
+            // ダイス外径をモードに合わせて再生成
+            rebuildDieMesh();
+
+            // ボタンのスタイル切替
+            const btnDirect = document.getElementById('btn-mode-direct');
+            const btnIndirect = document.getElementById('btn-mode-indirect');
+            if (mode === 'direct') {
+                btnDirect.className = "px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-orange-500 text-white shadow-md flex items-center gap-1.5";
+                btnIndirect.className = "px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5";
+            } else {
+                btnDirect.className = "px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5";
+                btnIndirect.className = "px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-1.5";
+            }
+
+            // 違いがわかりやすいようにSTEP 2（装填）または最初から更新
+            if (currentTime < 3.5) {
+                currentTime = 3.6;
+            }
+            updateSimulation(currentTime);
+        }
+
+        function setDieShape(shape) {
+            currentDieShape = shape;
+            rebuildDieMesh();
+            rebuildProductMesh();
+            updateSimulation(currentTime);
+
+            // ボタンのスタイル切替
+            ['round', 'hex', 'square'].forEach(s => {
+                const btn = document.getElementById(`btn-shape-${s}`);
+                if (s === shape) {
+                    btn.className = "shape-btn px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-orange-500 text-white shadow-md";
+                } else {
+                    btn.className = "shape-btn px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800/80 text-slate-300 hover:bg-slate-700";
+                }
+            });
+        }
+
+        function toggleCutaway() {
+            isCutaway = !isCutaway;
+            containerOuterCut.visible = isCutaway;
+            containerOuterFull.visible = !isCutaway;
+            hollowStemCut.visible = extrusionMode === 'indirect' && isCutaway;
+            hollowStemFull.visible = extrusionMode === 'indirect' && !isCutaway;
+
+            const btn = document.getElementById('btn-cutaway');
+            btn.textContent = isCutaway ? "断面: ON" : "断面: 透過";
+        }
+
+        function toggleLabels() {
+            showLabels = !showLabels;
+            const btn = document.getElementById('btn-labels');
+            btn.textContent = showLabels ? "名前: ON" : "名前: OFF";
+            btn.className = showLabels
+                ? "px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-sky-500/20 border border-sky-400/50 text-sky-200 hover:bg-sky-500/30"
+                : "px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:bg-slate-700";
+        }
+
+        function resetCamera() {
+            camSpherical = { radius: 13.5, theta: 0.35, phi: 1.25 };
+            updateCameraPosition();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==========================================
+        // 8. メインアニメーションループ
+        // ==========================================
+        function animate(timestamp) {
+            animationId = requestAnimationFrame(animate);
+
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const deltaSec = Math.min((timestamp - lastFrameTime) / 1000, 0.1);
+            lastFrameTime = timestamp;
+
+            if (isPlaying) {
+                currentTime += deltaSec;
+                if (currentTime > TOTAL_DURATION) {
+                    currentTime = 0; // ループ再生
+                }
+                updateSimulation(currentTime);
+            } else {
+                // 一時停止中でもパーティクルや描画を維持
+                updateSimulation(currentTime);
+            }
+
+            updateLabels3D();
+            renderer.render(scene, camera);
+        }
+
+        // ページ読み込み完了後に開始
+        window.onload = function () {
+            try {
+                initScene();
+                updateSimulation(0);
+                requestAnimationFrame(animate);
+            } catch (err) {
+                console.error("3Dシーンの初期化に失敗しました:", err);
+            }
+        };
+    </script>
+</body>
+</html>
