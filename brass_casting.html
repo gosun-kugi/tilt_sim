@@ -1,0 +1,3532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黄銅(C2600) 縦型スラブ連続鋳造 巻き込みシミュレーター</title>
+  <style>
+    :root {
+      --bg-base: #070b14;
+      --bg-surface: #0e1626;
+      --bg-card: #152036;
+      --bg-input: #0a111f;
+      --border: #24334c;
+      --border-strong: #374b6b;
+      --text-main: #f1f5f9;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+      --brass: #f59e0b;
+      --brass-light: #fcd34d;
+      --sky: #38bdf8;
+      --emerald: #10b981;
+      --red: #ef4444;
+      --orange: #fb923c;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", "Segoe UI", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      line-height: 1.4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* ヘッダー */
+    .app-header {
+      background: rgba(14, 22, 38, 0.95);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-inner {
+      max-width: 1760px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+      color: #090d16;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .pill-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.14);
+      color: var(--brass-light);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #1b2840;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.14s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: #263857; border-color: #64748b; }
+    .btn:active { transform: translateY(1px); }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      color: #090d16;
+      border-color: #fbbf24;
+    }
+    .btn-primary:hover { background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%); }
+
+    .btn-csv {
+      background: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.45);
+    }
+    .btn-csv:hover { background: rgba(16, 185, 129, 0.24); border-color: #34d399; }
+
+    /* メイン2カラム */
+    .main-grid {
+      max-width: 1760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 10px 12px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.38fr) minmax(370px, 0.92fr);
+      gap: 12px;
+      align-items: start;
+      flex: 1;
+    }
+
+    @media (max-width: 1080px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .title-bar {
+      width: 4px;
+      height: 13px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* テレメトリKPIバー（左エリア上部） */
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    @media (max-width: 860px) {
+      .kpi-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .kpi-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .kpi-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .kpi-label {
+      font-size: 10px;
+      color: var(--text-sub);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+      margin-top: 2px;
+    }
+
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .kpi-unit {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+
+    .kpi-sub {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-tile {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .status-badge {
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid;
+      transition: all 0.2s;
+    }
+
+    .badge-safe { background: rgba(16, 185, 129, 0.14); color: #34d399; border-color: rgba(16, 185, 129, 0.45); }
+    .badge-warn { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.5); }
+    .badge-danger { background: rgba(239, 68, 68, 0.22); color: #f87171; border-color: rgba(239, 68, 68, 0.55); }
+
+    /* 表示切替ツールバー */
+    .sim-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(36, 51, 76, 0.85);
+    }
+
+    .seg-group {
+      display: inline-flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-sub);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+
+    .seg-btn:hover { color: var(--text-main); }
+    .seg-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--sky);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
+    }
+    .seg-btn.active-brass {
+      background: rgba(245, 158, 11, 0.22);
+      color: var(--brass-light);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.48);
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .chk-lbl {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chk-lbl input {
+      accent-color: var(--brass);
+      width: 13px;
+      height: 13px;
+      cursor: pointer;
+    }
+
+    .meta-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .dot-run { background: var(--emerald); box-shadow: 0 0 7px var(--emerald); }
+    .dot-pause { background: var(--brass); }
+
+    /* メインキャンバス容器 */
+    .canvas-stage {
+      position: relative;
+      width: 100%;
+      height: 620px;
+      background: #050911;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 640px) {
+      .canvas-stage { height: 480px; }
+    }
+
+    .canvas-stage canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 凡例 & 統計サマリ */
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 7px;
+      font-size: 10.5px;
+      color: var(--text-sub);
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* プリセット */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      text-align: left;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 8px;
+      cursor: pointer;
+      transition: all 0.14s;
+      color: var(--text-main);
+    }
+
+    .preset-btn:hover {
+      background: #1d2c48;
+      border-color: var(--brass);
+    }
+
+    .preset-btn.active-preset {
+      border-color: var(--brass);
+      background: rgba(245, 158, 11, 0.11);
+    }
+
+    .preset-name {
+      font-size: 11.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .preset-desc {
+      font-size: 9.8px;
+      color: var(--text-sub);
+      margin-top: 2px;
+      font-family: var(--font-mono);
+    }
+
+    .mini-tag {
+      font-family: var(--font-sans);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .tag-green { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
+    .tag-orange { background: rgba(251, 146, 60, 0.16); color: #fdba74; border-color: rgba(251, 146, 60, 0.42); }
+    .tag-red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
+    .tag-sky { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.42); }
+
+    /* パラメータスライダー */
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px 12px;
+    }
+
+    @media (max-width: 520px) {
+      .param-grid { grid-template-columns: 1fr; }
+    }
+
+    .param-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .param-item.full {
+      grid-column: span 2;
+    }
+    @media (max-width: 520px) {
+      .param-item.full { grid-column: span 1; }
+    }
+
+    .param-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .param-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .param-val {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--brass-light);
+    }
+
+    .param-range-lbl {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #223048;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"].angle-slider {
+      background: linear-gradient(90deg, #0284c7 0%, #10b981 42.8%, #f59e0b 57%, #ef4444 100%);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #f59e0b;
+      border: 2px solid #fef3c7;
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #f59e0b;
+      border: 2px solid #fef3c7;
+    }
+
+    /* 固定ノズル仕様ボックス */
+    .spec-box {
+      margin-top: 9px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(10, 17, 31, 0.85);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .spec-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .spec-mono {
+      font-family: var(--font-mono);
+      color: var(--sky);
+      font-weight: 600;
+    }
+
+    /* 粒子集計ミニバー */
+    .outcome-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .outcome-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .outcome-cell span { font-size: 9.5px; color: var(--text-sub); }
+    .outcome-cell strong { font-family: var(--font-mono); font-size: 12.5px; }
+
+    /* 右側チャート */
+    .chart-box {
+      width: 100%;
+      height: 142px;
+      background: #050911;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .chart-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+
+    .hidden { display: none !important; }
+
+    /* トースト通知 */
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid var(--emerald);
+      padding: 9px 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: all 0.22s ease;
+      z-index: 100;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    details.model-note {
+      background: rgba(14, 22, 38, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 10.8px;
+      color: var(--text-sub);
+    }
+
+    details.model-note summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #cbd5e1;
+      user-select: none;
+    }
+
+    details.model-note ul {
+      margin-top: 6px;
+      padding-left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">CuZn</div>
+        <div>
+          <div class="brand-title">
+            黄銅(C2600) 縦型スラブ連続鋳造 巻き込みシミュレーター
+            <span class="pill-tag">深さ平均 2D-CFD + 熱凝固 + 粒子追跡</span>
+          </div>
+          <div class="brand-sub">
+            70Cu-30Zn (ρ=7800 kg/m³, T<sub>L</sub>=955°C / T<sub>S</sub>=915°C) ・ 連続の式厳密準拠 ・ 左右2孔 φ25 mm SEN
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnPause" class="btn btn-primary" title="シミュレーションの再生・一時停止">
+          <span id="pauseIcon">⏸</span><span id="pauseText">一時停止</span>
+        </button>
+        <button id="btnClearP" class="btn" title="粒子と集計結果をクリア">粒子クリア</button>
+        <button id="btnReset" class="btn" title="初期条件にリセット">初期リセット</button>
+        <button id="btnCSV" class="btn btn-csv" title="全パラメータ・物理計算値・集計結果をCSV出力">⬇ CSV出力</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインダッシュボード -->
+  <main class="main-grid">
+
+    <!-- 左メインエリア -->
+    <section class="col-left">
+
+      <!-- リアルタイム物理テレメトリKPIバー -->
+      <div class="kpi-bar">
+        <div class="kpi-tile">
+          <div class="kpi-label">体積流量 Q / 鋳造量</div>
+          <div class="kpi-value-row">
+            <span id="kpiQ" class="kpi-val" style="color:var(--brass-light);">16.2</span>
+            <span class="kpi-unit">L/min</span>
+          </div>
+          <div id="kpiMassRate" class="kpi-sub">126.4 kg/min</div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label">3D実吐出流速 v<sub>port</sub></div>
+          <div class="kpi-value-row">
+            <span id="kpiVport" class="kpi-val" style="color:var(--sky);">0.275</span>
+            <span class="kpi-unit">m/s</span>
+          </div>
+          <div id="kpiStopper" class="kpi-sub">ストッパー開度: 14.2%</div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label">最大湯面流速 u<sub>surf</sub></div>
+          <div class="kpi-value-row">
+            <span id="kpiUsurf" class="kpi-val" style="color:var(--sky);">0.06</span>
+            <span class="kpi-unit">m/s</span>
+          </div>
+          <div id="kpiUcrit" class="kpi-sub">臨界 0.22 m/s 比 0.27×</div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label">最大波高 Δh (実寸)</div>
+          <div class="kpi-value-row">
+            <span id="kpiWave" class="kpi-val" style="color:var(--brass-light);">0.4</span>
+            <span class="kpi-unit">mm</span>
+          </div>
+          <div id="kpiWaveSub" class="kpi-sub">Peak-to-Peak (×1表示)</div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label">シェル捕捉率 (欠陥)</div>
+          <div class="kpi-value-row">
+            <span id="kpiTrapPct" class="kpi-val" style="color:var(--red);">0.0</span>
+            <span class="kpi-unit">%</span>
+          </div>
+          <div id="kpiTrapSub" class="kpi-sub">捕捉 0 / 判定 0個</div>
+        </div>
+
+        <div class="kpi-tile status-tile">
+          <div class="kpi-label">操業安定ステータス</div>
+          <div id="statusBadge" class="status-badge badge-safe">安定（鏡面湯面）</div>
+          <div id="kpiExitShell" class="kpi-sub">出口シェル: 47.5 mm</div>
+        </div>
+      </div>
+
+      <!-- メイン2Dシミュレーションカード -->
+      <div class="card">
+        <!-- 表示切替バー -->
+        <div class="sim-toolbar">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+            <div class="seg-group" id="mapTabs" title="背景カラーマップ切替">
+              <button class="seg-btn active" data-map="speed">流速</button>
+              <button class="seg-btn" data-map="temp">温度・凝固</button>
+              <button class="seg-btn" data-map="vorticity">渦度</button>
+            </div>
+
+            <div class="seg-group" id="waveScaleTabs" title="メニスカス波高の画面表示倍率（数値KPIは常に実寸mm）">
+              <button class="seg-btn active-brass" data-wscale="1">波高: 実寸 (×1)</button>
+              <button class="seg-btn" data-wscale="5">拡大 (×5)</button>
+            </div>
+          </div>
+
+          <div class="toggle-group">
+            <label class="chk-lbl"><input type="checkbox" id="chkFlow" checked>流線・ベクトル</label>
+            <label class="chk-lbl"><input type="checkbox" id="chkShell" checked>凝固線</label>
+            <label class="chk-lbl"><input type="checkbox" id="chkTrails" checked>粒子軌跡</label>
+          </div>
+        </div>
+
+        <!-- シミュレーション稼働メタ情報 -->
+        <div class="meta-strip">
+          <div>
+            <span id="runDot" class="dot dot-run"></span>
+            <strong id="txtFps">60</strong> FPS ・
+            t = <strong id="txtTime">0.0</strong> s ・
+            断面: <strong id="txtDim">600 × 180</strong> mm (深さ 900 mm)
+          </div>
+          <div>
+            活性粒子: <strong id="txtActiveP">0</strong> ・
+            湯面巻込: <strong id="txtSrcSurf" style="color:#f87171;">0</strong> ・
+            ノズル流入: <strong id="txtSrcNoz" style="color:#38bdf8;">0</strong>
+          </div>
+        </div>
+
+        <!-- 2D Canvas ステージ -->
+        <div class="canvas-stage" id="simStage">
+          <canvas id="simCanvas"></canvas>
+        </div>
+
+        <!-- 凡例 -->
+        <div class="legend-bar">
+          <div class="legend-items">
+            <span class="leg-item">
+              <span style="width:9px;height:9px;border-radius:50%;border:1.8px solid #7dd3fc;background:rgba(56,189,248,0.35);display:inline-block;"></span>
+              ガス気泡 (0.2–2.0mm)
+            </span>
+            <span class="leg-item">
+              <span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+              介在物 (30–300µm)
+            </span>
+            <span class="leg-item">
+              <span style="width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px #ef4444;display:inline-block;"></span>
+              シェル捕捉欠陥
+            </span>
+            <span class="leg-item">
+              <span style="width:14px;height:2px;background:#fef08a;display:inline-block;"></span>
+              液相線 955°C
+            </span>
+            <span class="leg-item">
+              <span style="width:14px;height:2px;background:#f97316;display:inline-block;"></span>
+              固相線 915°C
+            </span>
+          </div>
+          <div style="font-family:var(--font-mono);color:var(--text-muted);">
+            KH臨界流速 u<sub>crit</sub> = 0.22 m/s
+          </div>
+        </div>
+      </div>
+
+      <!-- 物理モデル要約（折りたたみ） -->
+      <details class="model-note">
+        <summary>▸ 物理モデル・スケーリング仕様（標準条件で過剰波立ちしない理由）</summary>
+        <ul>
+          <li><strong>連続の式と実吐出流速</strong>：定常流量 Q = W × T × V<sub>c</sub> を左右2孔 φ25 mm（A<sub>ports</sub> = 9.817 cm²）で除して3D実吐出流速 v<sub>port</sub> を算出（標準 600×180 mm, 150 mm/min で Q=16.2 L/min, v<sub>port</sub>=0.275 m/s）。</li>
+          <li><strong>3D減衰項つき深さ平均2D CFD</strong>：72×108非等方格子（Δx=W/72, Δy=8.33 mm）上で、ポート近傍の局所運動量ソース＋奥行き広がり摩擦 f<sub>3D</sub> = -(C<sub>3D</sub>/T<sub>liq</sub>)|u|u を適用し、div(u)=0 を厳密に維持（SOR法 ω=1.7, 36反復）。</li>
+          <li><strong>真の動圧ヘッドによる実寸波高</strong>：SORで得た物理圧力偏差 ΔP<sub>top</sub> から η<sub>eq</sub> = ΔP<sub>top</sub>/(ρg) を体積保存で算出し減衰重力波で更新。標準条件では u<sub>surf</sub> ≈ 0.05〜0.08 m/s・Δh ≈ 0.2〜0.8 mm の鏡面状態を維持します。</li>
+          <li><strong>タンディッシュ湯面高さ H</strong>：定常流量 Q は変えず、トリチェリ流速 √(2gH) からストッパー開度比を算出。H &lt; 260 mm で吸い込み渦によるノズル流入粒子が急増、H &gt; 600 mm で絞り乱流脈動が増加します。</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- 右コントロール＆解析パネル -->
+    <aside class="col-right">
+
+      <!-- 4つのワンクリック比較プリセット -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="title-bar" style="background:var(--emerald);"></span>
+            ワンクリック操業比較プリセット
+          </div>
+        </div>
+        <div class="preset-grid" id="presetGrid">
+          <button class="preset-btn active-preset" data-preset="standard">
+            <div class="preset-name">1. 標準安定操業 <span class="mini-tag tag-green">基準</span></div>
+            <div class="preset-desc">600×180 / 150mm/m / D120 / -15°</div>
+          </button>
+
+          <button class="preset-btn" data-preset="upShallow">
+            <div class="preset-name">2. 急角度上向き・浅浸漬 <span class="mini-tag tag-red">+55°</span></div>
+            <div class="preset-desc">600×180 / 260mm/m / D55 / +55°</div>
+          </button>
+
+          <button class="preset-btn" data-preset="largeFast">
+            <div class="preset-name">3. 大型スラブ・高速鋳造 <span class="mini-tag tag-orange">高流量</span></div>
+            <div class="preset-desc">1000×240 / 280mm/m / D110 / -10°</div>
+          </button>
+
+          <button class="preset-btn" data-preset="lowTD">
+            <div class="preset-name">4. 低タンディッシュ湯面 <span class="mini-tag tag-orange">TD渦</span></div>
+            <div class="preset-desc">600×180 / 160mm/m / H=180mm</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 鋳造パラメータ操作スライダー -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="title-bar" style="background:var(--brass);"></span>
+            スラブ寸法・鋳造条件パラメータ
+          </div>
+        </div>
+
+        <div class="param-grid">
+          <!-- スラブ幅 W -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">スラブ幅 W</span>
+              <span id="valW" class="param-val">600 mm</span>
+            </div>
+            <input type="range" id="rngW" min="300" max="1200" step="20" value="600">
+            <div class="param-range-lbl"><span>300</span><span>断面比連動</span><span>1200 mm</span></div>
+          </div>
+
+          <!-- スラブ厚み T -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">スラブ厚み T</span>
+              <span id="valT" class="param-val">180 mm</span>
+            </div>
+            <input type="range" id="rngT" min="80" max="300" step="10" value="180">
+            <div class="param-range-lbl"><span>80</span><span>奥行き3D抵抗</span><span>300 mm</span></div>
+          </div>
+
+          <!-- 引き抜き速度 Vc -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">引き抜き速度 V<sub>c</sub></span>
+              <span id="valVc" class="param-val">150 mm/min</span>
+            </div>
+            <input type="range" id="rngVc" min="50" max="350" step="5" value="150">
+            <div class="param-range-lbl"><span>50</span><span>流量・シェル連動</span><span>350</span></div>
+          </div>
+
+          <!-- ノズル浸漬深さ D -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">ノズル浸漬深さ D</span>
+              <span id="valD" class="param-val">120 mm</span>
+            </div>
+            <input type="range" id="rngD" min="40" max="220" step="5" value="120">
+            <div class="param-range-lbl"><span>40 (浅)</span><span>ポート中心</span><span>220 mm</span></div>
+          </div>
+
+          <!-- ノズル吐出角度 θ (全幅) -->
+          <div class="param-item full" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.22);border-radius:7px;padding:6px 8px;">
+            <div class="param-top">
+              <span class="param-name">
+                ノズル吐出角度 θ
+                <span id="tagAngle" class="mini-tag tag-green">下向き</span>
+              </span>
+              <span id="valAngle" class="param-val">-15°</span>
+            </div>
+            <input type="range" id="rngAngle" class="angle-slider" min="-45" max="60" step="1" value="-15">
+            <div class="param-range-lbl"><span>-45° (急下向)</span><span>0° (水平)</span><span style="color:#fca5a5;">+60° (急上向)</span></div>
+          </div>
+
+          <!-- 鋳造温度 T_cast -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">鋳造温度 T<sub>cast</sub></span>
+              <span id="valTemp" class="param-val">1050 °C</span>
+            </div>
+            <input type="range" id="rngTemp" min="1000" max="1120" step="5" value="1050">
+            <div class="param-range-lbl"><span>1000</span><span id="lblSup">ΔT = 95°C</span><span>1120 °C</span></div>
+          </div>
+
+          <!-- タンディッシュ湯面高さ H -->
+          <div class="param-item">
+            <div class="param-top">
+              <span class="param-name">
+                TD湯面高さ H
+                <span id="tagTD" class="mini-tag tag-red hidden">渦注意</span>
+              </span>
+              <span id="valH" class="param-val">450 mm</span>
+            </div>
+            <input type="range" id="rngH" min="150" max="800" step="10" value="450">
+            <div class="param-range-lbl"><span>150 (渦)</span><span>600+脈動増</span><span>800 mm</span></div>
+          </div>
+        </div>
+
+        <!-- 固定仕様 & 物理算出値パネル -->
+        <div class="spec-box">
+          <div class="spec-row">
+            <span style="color:var(--text-sub);font-weight:600;">吐出口：左右2孔 φ25 mm（面積 9.82 cm²）</span>
+            <span id="specFlow" class="spec-mono">v_port = 0.275 m/s</span>
+          </div>
+          <div class="spec-row" style="font-size:10.5px;color:var(--text-sub);">
+            <span id="specTorricelli">トリチェリ理論流速 √(2gH) = 2.97 m/s</span>
+            <span id="specOpening" class="spec-mono" style="color:var(--brass-light);">ストッパー開度比: 14.2%</span>
+          </div>
+        </div>
+
+        <!-- 粒子判定内訳 -->
+        <div class="outcome-bar">
+          <div class="outcome-cell">
+            <span>湯面浮上排出</span>
+            <strong id="cntEsc" style="color:var(--emerald);">0 (0.0%)</strong>
+          </div>
+          <div class="outcome-cell">
+            <span>シェル捕捉 (欠陥)</span>
+            <strong id="cntTrap" style="color:var(--red);">0 (0.0%)</strong>
+          </div>
+          <div class="outcome-cell">
+            <span>深部持ち込み</span>
+            <strong id="cntDeep" style="color:var(--orange);">0 (0.0%)</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- リアルタイム解析グラフ1：時系列トレンド -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="title-bar" style="background:var(--sky);"></span>
+            時系列トレンド（直近60秒）
+          </div>
+          <div class="chart-legend">
+            <span style="color:#38bdf8;">━ 湯面流速 m/s</span>
+            <span style="color:#fcd34d;">━ 波高 mm</span>
+            <span style="color:#ef4444;">━ 捕捉/min</span>
+          </div>
+        </div>
+        <div class="chart-box">
+          <canvas id="trendCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- リアルタイム解析グラフ2：欠陥深さ分布ヒストグラム -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="title-bar" style="background:var(--red);"></span>
+            欠陥深さ分布（表層 0〜50 mm）
+          </div>
+          <div class="chart-legend">
+            <span style="color:#38bdf8;">■ ガス気泡</span>
+            <span style="color:#f59e0b;">■ 介在物</span>
+          </div>
+        </div>
+        <div class="chart-box">
+          <canvas id="histCanvas"></canvas>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <div id="toast" class="toast">通知</div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 黄銅 (C2600: 70Cu-30Zn) 縦型スラブ連続鋳造 巻き込みシミュレーター
+     * -------------------------------------------------------------------------
+     * 1. 連続の式 Q = W * T * Vc と左右2孔 φ25 mm (A = 9.817e-4 m²) に基づく実流速
+     * 2. 非等方 72×108 格子での深さ平均 2D ナビエ・ストークス CFD
+     *    - 2次精度クランプ付き半ラグランジュ移流 (MacCormack-SL、無条件安定)
+     *    - Smagorinsky SGS乱流粘性 + 奥行き3D減衰項 -(C_3D/T_liq)|u|u
+     *    - 局所運動量ソースによるポート噴流駆動 (div u = 0 厳密維持)
+     *    - SOR圧力ソルバー (ω=1.7, 36反復) で真の物理圧力 p [m²/s²] を求解
+     * 3. 物理動圧ヘッド η_eq = ΔP_top / (ρg) に収束する減衰重力波メニスカス
+     * 4. C2600 熱輸送・√t則ベース凝固シェル (K_s ≈ 22 mm/min^0.5) ＋ 再溶解
+     * 5. Schiller-Naumann + Eötvös 粒子追跡 (ガス気泡・介在物) と捕捉判定
+     * =========================================================================
+     */
+    (function () {
+      'use strict';
+
+      // =======================================================================
+      // 1. 物理定数・固定幾何仕様
+      // =======================================================================
+      const PHYS = {
+        L: 0.90,               // 計算領域高さ [m] (900 mm)
+        L_MOLD: 0.70,          // 水冷銅モールド長さ [m] (700 mm)
+        D_PORT: 0.025,         // ノズル吐出口径 [m] (φ25 mm)
+        A_PORTS: 2.0 * Math.PI * 0.0125 * 0.0125, // 9.817477e-4 m² (9.82 cm²)
+        SEN_OD: 0.064,         // 浸漬ノズル外径 [m] (64 mm)
+        CD_STOPPER: 0.65,      // ストッパー・ノズル系流量係数
+
+        // C2600黄銅物性
+        RHO: 7800.0,           // 溶湯密度 [kg/m³]
+        T_LIQ: 955.0,          // 液相線温度 [°C]
+        T_SOL: 915.0,          // 固相線温度 [°C]
+        SIGMA: 1.15,           // 表面張力 [N/m]
+        NU_0: 4.5e-7,          // 分子動粘性係数 [m²/s]
+        ALPHA_0: 2.8e-5,       // 熱拡散率 [m²/s]
+        BETA_T: 0.65 / 7800.0, // 熱膨張係数 [1/K]
+        G: 9.81,               // 重力加速度 [m/s²]
+        K_SOLID_MM: 22.0,      // 黄銅凝固係数 [mm / min^0.5]
+
+        C_SMAG: 0.15,          // Smagorinsky定数
+        C_3D: 0.46,            // 奥行き方向3D広がり・広面摩擦減衰係数
+        U_CRIT: 0.22           // メニスカスKHせん断臨界流速 [m/s]
+      };
+
+      const NX = 72;
+      const NY = 108;
+      const N = NX * NY;
+      const DY = PHYS.L / NY;  // 0.0083333 m (8.33 mm)
+      const INV_DY = 1.0 / DY;
+      const INV_2DY = 0.5 / DY;
+      const INV_DY2 = 1.0 / (DY * DY);
+      const IX = (i, j) => i + j * NX;
+
+      // 動的格子間隔（スラブ幅 W に応じて更新）
+      let DX = 0.60 / NX;
+      let INV_DX = 1.0 / DX;
+      let INV_2DX = 0.5 / DX;
+      let INV_DX2 = 1.0 / (DX * DX);
+
+      // =======================================================================
+      // 2. パラメータ・プリセット・表示状態
+      // =======================================================================
+      const params = {
+        W: 600,       // mm (300 - 1200)
+        T: 180,       // mm (80 - 300)
+        Vc: 150,      // mm/min (50 - 350)
+        D: 120,       // mm (40 - 220)
+        angle: -15,   // deg (-45 to +60, 正=上向き)
+        T_cast: 1050, // °C (1000 - 1120)
+        H: 450        // mm (150 - 800)
+      };
+
+      const DEFAULTS = { ...params };
+
+      const PRESETS = {
+        standard:  { W: 600,  T: 180, Vc: 150, D: 120, angle: -15, T_cast: 1050, H: 450 },
+        upShallow: { W: 600,  T: 180, Vc: 260, D: 55,  angle: +55, T_cast: 1050, H: 450 },
+        largeFast: { W: 1000, T: 240, Vc: 280, D: 110, angle: -10, T_cast: 1060, H: 500 },
+        lowTD:     { W: 600,  T: 180, Vc: 160, D: 120, angle: -15, T_cast: 1050, H: 180 }
+      };
+
+      const view = {
+        mapMode: 'speed',   // 'speed' | 'temp' | 'vorticity'
+        waveScale: 1,       // 1 (実寸) | 5 (拡大)
+        showFlow: true,     // 流線・ベクトル
+        showShell: true,    // 液相線・固相線
+        showTrails: true,   // 粒子軌跡
+        paused: false
+      };
+
+      // =======================================================================
+      // 3. CFD・熱・凝固・メニスカス場配列
+      // =======================================================================
+      let u = new Float32Array(N);
+      let v = new Float32Array(N);
+      let uTmp = new Float32Array(N);
+      let vTmp = new Float32Array(N);
+      let uBack = new Float32Array(N);
+      let vBack = new Float32Array(N);
+
+      let Tfield = new Float32Array(N);
+      let TTmp = new Float32Array(N);
+      let fs = new Float32Array(N);       // 固相率 (0=液相, 1=固相)
+      let nuT = new Float32Array(N);      // SGS乱流粘性 [m²/s]
+      let vort = new Float32Array(N);     // 渦度 [1/s]
+      let pKin = new Float32Array(N);     // 物理動圧 p/ρ [m²/s²]
+      let divField = new Float32Array(N); // 発散/dt
+
+      // セルマスク: 0=流体/凝固域, 1=SEN固体本体
+      let mask = new Uint8Array(N);
+
+      // 左右凝固シェル厚 [m]（深さごと）、広面液相厚み [m]
+      let shellL = new Float32Array(NY);
+      let shellR = new Float32Array(NY);
+      let thickLiq = new Float32Array(NY);
+
+      // 1D 自由表面（メニスカス実寸変位 η [m], 速度 dη/dt [m/s]）
+      let eta = new Float32Array(NX);
+      let etaEq = new Float32Array(NX);
+      let etaV = new Float32Array(NX);
+
+      // オフスクリーンコンター
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = NX;
+      offCanvas.height = NY;
+      const offCtx = offCanvas.getContext('2d');
+      const offImg = offCtx.createImageData(NX, NY);
+
+      // 流線トレーサー
+      const NUM_TRACERS = 160;
+      let tracers = [];
+
+      // =======================================================================
+      // 4. 粒子(DPM)・統計・トレンド・ヒストグラム
+      // =======================================================================
+      let particles = [];
+      const MAX_PARTICLES = 750;
+
+      // 欠陥深さ分布（表層 0〜50 mm、2.5 mm 刻み = 20ビン）
+      const HIST_BINS = 20;
+      const HIST_MAX_MM = 50.0;
+      const HIST_BIN_MM = HIST_MAX_MM / HIST_BINS;
+      let histGas = new Int32Array(HIST_BINS);
+      let histInc = new Int32Array(HIST_BINS);
+
+      // 時系列トレンド（直近60秒、1秒間隔）
+      const TREND_LEN = 60;
+      let trendU = new Float32Array(TREND_LEN);
+      let trendWave = new Float32Array(TREND_LEN);
+      let trendTrap = new Float32Array(TREND_LEN);
+      let secAcc = { t: 0, trapped: 0 };
+
+      let derived = {
+        W_m: 0.60,
+        T_m: 0.18,
+        Vc_ms: 0.0025,
+        Q_m3s: 2.7e-4,
+        Q_lmin: 16.2,
+        mass_kgmin: 126.36,
+        vPort3D: 0.275,
+        vTorricelli: 2.97,
+        stopperPct: 14.2,
+        pulseAmp: 0.03
+      };
+
+      let stats = {
+        trapped: 0,
+        deep: 0,
+        escaped: 0,
+        srcSurf: 0,
+        srcNoz: 0,
+        uMaxSurf: 0,
+        wavePeakMm: 0,
+        exitShellMm: 47.0
+      };
+
+      let senGeom = { iLeft: 32, iRight: 39, jPort: 14, jBot: 17, xLeft: 0.268, xRight: 0.332, yPort: 0.12, yBot: 0.145 };
+      let simTime = 0;
+      let lastTs = 0;
+      let fpsFrames = 0;
+      let fpsTimer = 0;
+
+      // =======================================================================
+      // 5. DOM 参照
+      // =======================================================================
+      const simStage = document.getElementById('simStage');
+      const simCanvas = document.getElementById('simCanvas');
+      const ctx = simCanvas.getContext('2d');
+      const trendCanvas = document.getElementById('trendCanvas');
+      const trendCtx = trendCanvas.getContext('2d');
+      const histCanvas = document.getElementById('histCanvas');
+      const histCtx = histCanvas.getContext('2d');
+
+      const ui = {
+        btnPause: document.getElementById('btnPause'),
+        pauseIcon: document.getElementById('pauseIcon'),
+        pauseText: document.getElementById('pauseText'),
+        btnClearP: document.getElementById('btnClearP'),
+        btnReset: document.getElementById('btnReset'),
+        btnCSV: document.getElementById('btnCSV'),
+
+        chkFlow: document.getElementById('chkFlow'),
+        chkShell: document.getElementById('chkShell'),
+        chkTrails: document.getElementById('chkTrails'),
+
+        kpiQ: document.getElementById('kpiQ'),
+        kpiMassRate: document.getElementById('kpiMassRate'),
+        kpiVport: document.getElementById('kpiVport'),
+        kpiStopper: document.getElementById('kpiStopper'),
+        kpiUsurf: document.getElementById('kpiUsurf'),
+        kpiUcrit: document.getElementById('kpiUcrit'),
+        kpiWave: document.getElementById('kpiWave'),
+        kpiWaveSub: document.getElementById('kpiWaveSub'),
+        kpiTrapPct: document.getElementById('kpiTrapPct'),
+        kpiTrapSub: document.getElementById('kpiTrapSub'),
+        statusBadge: document.getElementById('statusBadge'),
+        kpiExitShell: document.getElementById('kpiExitShell'),
+
+        runDot: document.getElementById('runDot'),
+        txtFps: document.getElementById('txtFps'),
+        txtTime: document.getElementById('txtTime'),
+        txtDim: document.getElementById('txtDim'),
+        txtActiveP: document.getElementById('txtActiveP'),
+        txtSrcSurf: document.getElementById('txtSrcSurf'),
+        txtSrcNoz: document.getElementById('txtSrcNoz'),
+
+        rngW: document.getElementById('rngW'), valW: document.getElementById('valW'),
+        rngT: document.getElementById('rngT'), valT: document.getElementById('valT'),
+        rngVc: document.getElementById('rngVc'), valVc: document.getElementById('valVc'),
+        rngD: document.getElementById('rngD'), valD: document.getElementById('valD'),
+        rngAngle: document.getElementById('rngAngle'), valAngle: document.getElementById('valAngle'), tagAngle: document.getElementById('tagAngle'),
+        rngTemp: document.getElementById('rngTemp'), valTemp: document.getElementById('valTemp'), lblSup: document.getElementById('lblSup'),
+        rngH: document.getElementById('rngH'), valH: document.getElementById('valH'), tagTD: document.getElementById('tagTD'),
+
+        specFlow: document.getElementById('specFlow'),
+        specTorricelli: document.getElementById('specTorricelli'),
+        specOpening: document.getElementById('specOpening'),
+
+        cntEsc: document.getElementById('cntEsc'),
+        cntTrap: document.getElementById('cntTrap'),
+        cntDeep: document.getElementById('cntDeep'),
+
+        toast: document.getElementById('toast')
+      };
+
+      // =======================================================================
+      // 6. 物理派生量・格子ジオメトリ・SENマスク更新
+      // =======================================================================
+      function updateDerivedAndGrid() {
+        const W_m = params.W / 1000.0;
+        const T_m = params.T / 1000.0;
+        const Vc_ms = params.Vc / 60000.0; // mm/min -> m/s
+        const H_m = params.H / 1000.0;
+
+        // 1) 連続の式 Q = W * T * Vc
+        const Q_m3s = W_m * T_m * Vc_ms;
+        const Q_lmin = Q_m3s * 60000.0;
+        const mass_kgmin = Q_m3s * PHYS.RHO * 60.0;
+        const vPort3D = Q_m3s / PHYS.A_PORTS;
+
+        // 2) タンディッシュ静水圧ヘッドとストッパー開度比
+        const vTorr = Math.sqrt(2.0 * PHYS.G * H_m);
+        const stopperPct = Math.min(100.0, (vPort3D / (PHYS.CD_STOPPER * vTorr)) * 100.0);
+
+        // H > 600mm ではストッパー絞りによる乱流脈動が増加、H < 260mm では渦揺らぎ
+        const highHeadTurb = params.H > 600 ? ((params.H - 600) / 200) * 0.09 : 0;
+        const lowHeadPulse = params.H < 260 ? ((260 - params.H) / 110) * 0.06 : 0;
+        const pulseAmp = 0.025 + highHeadTurb + lowHeadPulse;
+
+        derived = { W_m, T_m, Vc_ms, Q_m3s, Q_lmin, mass_kgmin, vPort3D, vTorricelli: vTorr, stopperPct, pulseAmp };
+
+        // 非等方格子間隔の動的更新
+        DX = W_m / NX;
+        INV_DX = 1.0 / DX;
+        INV_2DX = 0.5 / DX;
+        INV_DX2 = 1.0 / (DX * DX);
+
+        // SEN マスク更新（実寸外径 64 mm に応じたセル幅）
+        mask.fill(0);
+        const cx = NX * 0.5;
+        const halfCells = Math.max(2, Math.round((PHYS.SEN_OD * 0.5) * INV_DX));
+        const iLeft = Math.floor(cx - halfCells);
+        const iRight = Math.ceil(cx + halfCells) - 1;
+        const yPort = params.D / 1000.0;
+        const jPort = Math.max(4, Math.min(NY - 12, Math.round(yPort * INV_DY)));
+        const jBot = Math.min(NY - 8, jPort + 2);
+
+        senGeom = {
+          iLeft,
+          iRight,
+          jPort,
+          jBot,
+          xLeft: iLeft * DX,
+          xRight: (iRight + 1) * DX,
+          yPort,
+          yBot: (jBot + 1) * DY
+        };
+
+        for (let j = 0; j <= jBot; j++) {
+          const row = j * NX;
+          for (let i = iLeft; i <= iRight; i++) {
+            mask[row + i] = 1;
+          }
+        }
+      }
+
+      /** 理論的な √t 則に基づく基準シェル厚 [m]（過熱度・二次冷却帯考慮） */
+      function calcNominalShellThickness(y_m) {
+        const dTsup = params.T_cast - PHYS.T_LIQ;
+        // 過熱度が高いほどシェル成長係数がわずかに低下
+        const kEffMm = PHYS.K_SOLID_MM * Math.max(0.74, 1.0 - 0.0018 * (dTsup - 95.0));
+        const kEffM_s = (kEffMm / 1000.0) / Math.sqrt(60.0); // m / s^0.5
+
+        // モールド(0〜0.70m)と二次冷却帯(0.70〜0.90m, 抜熱係数0.72倍相当)
+        const effY = y_m <= PHYS.L_MOLD ? y_m : PHYS.L_MOLD + (y_m - PHYS.L_MOLD) * 0.65;
+        const tRes = effY / Math.max(0.0005, derived.Vc_ms);
+        const maxShell = Math.min(derived.W_m * 0.34, 0.14);
+        return Math.min(maxShell, kEffM_s * Math.sqrt(tRes));
+      }
+
+      // =======================================================================
+      // 7. 初期化（場・温度・トレーサー・統計）
+      // =======================================================================
+      function initFields(resetFlow = true) {
+        updateDerivedAndGrid();
+
+        if (resetFlow) {
+          u.fill(0);
+          v.fill(derived.Vc_ms);
+          pKin.fill(0);
+          divField.fill(0);
+          nuT.fill(0);
+          vort.fill(0);
+          eta.fill(0);
+          etaEq.fill(0);
+          etaV.fill(0);
+        }
+
+        // 初期温度場を √t シェル分布で設定
+        for (let j = 0; j < NY; j++) {
+          const y = (j + 0.5) * DY;
+          const sNom = calcNominalShellThickness(y);
+          const row = j * NX;
+          for (let i = 0; i < NX; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1) {
+              Tfield[idx] = params.T_cast;
+              continue;
+            }
+            const x = (i + 0.5) * DX;
+            const dWall = Math.min(x, derived.W_m - x);
+            if (dWall < sNom) {
+              const frac = dWall / Math.max(0.003, sNom);
+              Tfield[idx] = (PHYS.T_SOL - 130.0) + (PHYS.T_LIQ - (PHYS.T_SOL - 130.0)) * frac;
+            } else {
+              const bl = Math.min(1.0, (dWall - sNom) / 0.032);
+              Tfield[idx] = PHYS.T_LIQ + (params.T_cast - PHYS.T_LIQ) * Math.pow(bl, 0.72);
+            }
+          }
+        }
+
+        updateSolidFractionAndShells();
+        initTracers();
+      }
+
+      function initTracers() {
+        tracers = [];
+        for (let k = 0; k < NUM_TRACERS; k++) {
+          tracers.push(spawnTracer(false));
+        }
+      }
+
+      function spawnTracer(nearPort) {
+        let x, y;
+        if (nearPort) {
+          const isR = Math.random() < 0.5;
+          x = isR ? senGeom.xRight + DX * 0.8 : senGeom.xLeft - DX * 0.8;
+          y = senGeom.yPort + (Math.random() - 0.5) * 0.022;
+        } else {
+          x = 0.04 * derived.W_m + Math.random() * (0.92 * derived.W_m);
+          y = 0.02 + Math.random() * (PHYS.L - 0.05);
+        }
+        return { x, y, trail: [{ x, y }], life: 35 + Math.floor(Math.random() * 65) };
+      }
+
+      function clearParticlesAndStats() {
+        particles = [];
+        histGas.fill(0);
+        histInc.fill(0);
+        trendU.fill(0);
+        trendWave.fill(0);
+        trendTrap.fill(0);
+        secAcc = { t: 0, trapped: 0 };
+        stats.trapped = 0;
+        stats.deep = 0;
+        stats.escaped = 0;
+        stats.srcSurf = 0;
+        stats.srcNoz = 0;
+        simTime = 0;
+        renderTrendChart();
+        renderHistChart();
+        updateKPIs();
+      }
+
+      // =======================================================================
+      // 8. 2D 深さ平均 CFD ソルバー (非等方格子 + 3D減衰 + 局所運動量ソース + SOR)
+      // =======================================================================
+
+      /** バイリニア補間サンプラー (任意フィールド) */
+      function sampleGrid(arr, gx, gy) {
+        const cx = Math.max(0.5, Math.min(NX - 1.5, gx));
+        const cy = Math.max(0.5, Math.min(NY - 1.5, gy));
+        const i0 = Math.floor(cx);
+        const j0 = Math.floor(cy);
+        const sx = cx - i0;
+        const sy = cy - j0;
+        const idx = IX(i0, j0);
+        return (
+          (1 - sx) * (1 - sy) * arr[idx] +
+          sx * (1 - sy) * arr[idx + 1] +
+          (1 - sx) * sy * arr[idx + NX] +
+          sx * sy * arr[idx + NX + 1]
+        );
+      }
+
+      /**
+       * 2次精度クランプ付き半ラグランジュ法 (MacCormack-SL)
+       * 無条件安定でありながら数値拡散が極めて少なく、非等方格子(W=300〜1200mm)でも破綻しない。
+       */
+      function advectField(dst, src, backBuf, velU, velV, dt, isTemp) {
+        dst.set(src);
+
+        // 1) 後退トレース（1次半ラグランジュ）
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1) continue;
+            const gx = i - velU[idx] * dt * INV_DX;
+            const gy = j - velV[idx] * dt * INV_DY;
+            backBuf[idx] = sampleGrid(src, gx, gy);
+          }
+        }
+
+        // 2) 前進エラー補正＋局所min/maxクランプ
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1) continue;
+
+            const gxBack = Math.max(0.5, Math.min(NX - 1.5, i - velU[idx] * dt * INV_DX));
+            const gyBack = Math.max(0.5, Math.min(NY - 1.5, j - velV[idx] * dt * INV_DY));
+
+            const gxFwd = gxBack + velU[idx] * dt * INV_DX;
+            const gyFwd = gyBack + velV[idx] * dt * INV_DY;
+            const fwdVal = sampleGrid(backBuf, gxFwd, gyFwd);
+            let val = backBuf[idx] + 0.5 * (src[idx] - fwdVal);
+
+            // 後退元セル周囲4点のmin/maxで厳密クランプ（オーバーシュート完全防止）
+            const i0 = Math.floor(gxBack);
+            const j0 = Math.floor(gyBack);
+            const bIdx = IX(i0, j0);
+            const s00 = src[bIdx];
+            const s10 = src[bIdx + 1];
+            const s01 = src[bIdx + NX];
+            const s11 = src[bIdx + NX + 1];
+            let mn = s00, mx = s00;
+            if (s10 < mn) mn = s10; if (s10 > mx) mx = s10;
+            if (s01 < mn) mn = s01; if (s01 > mx) mx = s01;
+            if (s11 < mn) mn = s11; if (s11 > mx) mx = s11;
+
+            if (val < mn) val = mn;
+            else if (val > mx) val = mx;
+
+            if (!isTemp) {
+              if (val > 2.2) val = 2.2;
+              else if (val < -2.2) val = -2.2;
+            }
+            dst[idx] = val;
+          }
+        }
+      }
+
+      /** Smagorinsky SGS乱流粘性 ν_t と渦度 ω */
+      function computeTurbulenceAndVorticity() {
+        const deltaArea = DX * DY;
+        const cs2Delta2 = PHYS.C_SMAG * PHYS.C_SMAG * deltaArea;
+
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1 || fs[idx] > 0.85) {
+              nuT[idx] = 0;
+              vort[idx] = 0;
+              continue;
+            }
+            const dudx = (u[idx + 1] - u[idx - 1]) * INV_2DX;
+            const dudy = (u[idx + NX] - u[idx - NX]) * INV_2DY;
+            const dvdx = (v[idx + 1] - v[idx - 1]) * INV_2DX;
+            const dvdy = (v[idx + NX] - v[idx - NX]) * INV_2DY;
+
+            const sxy = 0.5 * (dudy + dvdx);
+            const sMag = Math.sqrt(2.0 * (dudx * dudx + dvdy * dvdy + 2.0 * sxy * sxy));
+            nuT[idx] = Math.min(0.0018, cs2Delta2 * sMag);
+            vort[idx] = dvdx - dudy;
+          }
+        }
+      }
+
+      /**
+       * ポート局所運動量ソース + 粘性拡散 + 奥行き3D減衰項 f_3D + 熱浮力 + Darcy凝固減衰
+       */
+      function applyForcesAndDiffusion(dt) {
+        const vCast = derived.Vc_ms;
+        const vPort = derived.vPort3D;
+        const rad = (params.angle * Math.PI) / 180.0;
+        const cosA = Math.cos(rad);
+        const sinA = Math.sin(rad); // 正(上向き)で vy < 0
+
+        // タンディッシュ高さ H に応じたノズル内乱流脈動
+        const amp = derived.pulseAmp;
+        const swayL = 1.0 + amp * Math.sin(simTime * 2.7 + 0.4);
+        const swayR = 1.0 + amp * Math.sin(simTime * 2.9 + 2.5);
+
+        // 3D丸孔(φ25mm)から厚みTへの初期広がり補正（厚み中央の代表ジェット初速）
+        // 厚みが厚いほど奥行き方向への初期エントレインメント希釈がわずかに強まる
+        const initSpreadFactor = Math.min(1.05, Math.max(0.68, Math.pow(0.18 / derived.T_m, 0.22)));
+
+        // 1) ポート出口近傍の局所運動量ソース（緩和力 F = (u_target - u) / tau）
+        // div(u)=0 を維持したまま物理的なジェット運動量を注入する
+        const { iLeft, iRight, jPort } = senGeom;
+        const jMin = Math.max(2, jPort - 1);
+        const jMax = Math.min(NY - 6, jPort + 1);
+        const tauJet = 0.012; // 緩和時定数 [s]
+        const relax = 1.0 - Math.exp(-dt / tauJet);
+
+        for (let j = jMin; j <= jMax; j++) {
+          const wProf = j === jPort ? 1.0 : 0.78; // ポート高さ方向の速度分布
+          const row = j * NX;
+
+          // 左ポート直外 (2セル幅の駆動ゾーン)
+          for (let offset = 1; offset <= 2; offset++) {
+            const il = iLeft - offset;
+            if (il > 2 && fs[row + il] < 0.6) {
+              const decayX = offset === 1 ? 1.0 : 0.65;
+              const targetSpd = vPort * initSpreadFactor * swayL * wProf;
+              const uTgt = -targetSpd * cosA;
+              const vTgt = -targetSpd * sinA;
+              const a = relax * decayX;
+              u[row + il] += (uTgt - u[row + il]) * a;
+              v[row + il] += (vTgt - v[row + il]) * a;
+            }
+          }
+
+          // 右ポート直外 (2セル幅の駆動ゾーン)
+          for (let offset = 1; offset <= 2; offset++) {
+            const ir = iRight + offset;
+            if (ir < NX - 3 && fs[row + ir] < 0.6) {
+              const decayX = offset === 1 ? 1.0 : 0.65;
+              const targetSpd = vPort * initSpreadFactor * swayR * wProf;
+              const uTgt = targetSpd * cosA;
+              const vTgt = -targetSpd * sinA;
+              const a = relax * decayX;
+              u[row + ir] += (uTgt - u[row + ir]) * a;
+              v[row + ir] += (vTgt - v[row + ir]) * a;
+            }
+          }
+        }
+
+        // 2) 半陰的 Gauss-Seidel 粘性拡散（ν_0 + ν_t）
+        const baseNu = PHYS.NU_0 + 0.00008;
+        uTmp.set(u);
+        vTmp.set(v);
+        for (let iter = 0; iter < 3; iter++) {
+          for (let j = 1; j < NY - 1; j++) {
+            const row = j * NX;
+            for (let i = 1; i < NX - 1; i++) {
+              const idx = row + i;
+              if (mask[idx] === 1) continue;
+              const nuEff = baseNu + nuT[idx];
+              const ax = dt * nuEff * INV_DX2;
+              const ay = dt * nuEff * INV_DY2;
+              const invD = 1.0 / (1.0 + 2.0 * (ax + ay));
+              u[idx] = (uTmp[idx] + ax * (u[idx - 1] + u[idx + 1]) + ay * (u[idx - NX] + u[idx + NX])) * invD;
+              v[idx] = (vTmp[idx] + ax * (v[idx - 1] + v[idx + 1]) + ay * (v[idx - NX] + v[idx + NX])) * invD;
+            }
+          }
+        }
+
+        // 3) 奥行き3D減衰項 f_3D + Boussinesq熱浮力 + マッシーゾーンDarcy減衰
+        const Tref = params.T_cast;
+        const A_mush = 480.0;
+        const eps = 1e-3;
+
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          const tLiq = Math.max(0.025, thickLiq[j]); // 広面凝固シェルを差し引いた液相厚み [m]
+          const c3dOverT = PHYS.C_3D / tLiq;
+
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1) {
+              u[idx] = 0;
+              v[idx] = 0;
+              continue;
+            }
+
+            const f = fs[idx];
+
+            // (a) Boussinesq熱浮力 (高温ほど軽く上向き)
+            if (f < 0.5) {
+              const aBuoy = -PHYS.G * PHYS.BETA_T * (Tfield[idx] - Tref);
+              v[idx] += aBuoy * dt * (1.0 - f);
+            }
+
+            // (b) 奥行き3D広がり・広面摩擦減衰 f_3D = -(C_3D / T_liq) * |u_rel| * u_rel
+            //     引き抜き平均流 (0, vCast) に対する相対速度へ陰的に作用させ、質量保存流は阻害しない
+            const uRel = u[idx];
+            const vRel = v[idx] - vCast;
+            const spdRel = Math.hypot(uRel, vRel);
+            const drag3D = c3dOverT * spdRel;
+            const damp3D = 1.0 / (1.0 + dt * drag3D);
+            u[idx] *= damp3D;
+            v[idx] = vCast + vRel * damp3D;
+
+            // (c) Darcy多孔質減衰（凝固シェル・マッシーゾーンを滑らかにスラブ速度 Vc へ固定）
+            if (f > 0.02) {
+              const omf = 1.0 - f;
+              const darcy = A_mush * (f * f) / (omf * omf * omf + eps);
+              const dampD = 1.0 / (1.0 + dt * darcy);
+              u[idx] *= dampD;
+              v[idx] = vCast + (v[idx] - vCast) * dampD;
+            }
+          }
+        }
+      }
+
+      /** 境界条件適用（div u = 0 との整合性を徹底） */
+      function applyFluidBoundaries() {
+        const vCast = derived.Vc_ms;
+
+        // SEN本体は滑りなし固体壁
+        for (let k = 0; k < N; k++) {
+          if (mask[k] === 1) {
+            u[k] = 0;
+            v[k] = 0;
+          }
+        }
+
+        // 左右モールド壁 (移動壁: u = 0, vy = +Vc)
+        for (let j = 0; j < NY; j++) {
+          const iL = IX(0, j);
+          const iR = IX(NX - 1, j);
+          u[iL] = 0; v[iL] = vCast;
+          u[iR] = 0; v[iR] = vCast;
+        }
+
+        // 上端メニスカス (フリースリップ: du/dy = 0, vy = 0)
+        for (let i = 1; i < NX - 1; i++) {
+          if (mask[i] === 0) {
+            u[i] = u[i + NX] * 0.99;
+            v[i] = 0;
+          }
+        }
+
+        // 下端流出境界 (一様引き抜き流出: u = 0, vy = +Vc)
+        const botRow = (NY - 1) * NX;
+        for (let i = 1; i < NX - 1; i++) {
+          u[botRow + i] = 0;
+          v[botRow + i] = vCast;
+        }
+      }
+
+      /**
+       * 非等方格子 SOR 圧力ポアソンソルバー (ω = 1.7, 反復36回)
+       * 真の物理圧力 p_kin = p / ρ [m²/s²] を求める。
+       */
+      function projectSOR(dt) {
+        const omega = 1.7;
+        const oneMinusW = 1.0 - omega;
+        const invDt = 1.0 / dt;
+        const invDenom = 1.0 / (2.0 * (INV_DX2 + INV_DY2));
+
+        // 発散 / dt
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1 || fs[idx] > 0.88) {
+              divField[idx] = 0;
+              continue;
+            }
+            const div =
+              (u[idx + 1] - u[idx - 1]) * INV_2DX +
+              (v[idx + NX] - v[idx - NX]) * INV_2DY;
+            divField[idx] = div * invDt;
+          }
+        }
+
+        // 前ステップの圧力をウォームスタート
+        for (let k = 0; k < N; k++) pKin[k] *= 0.88;
+
+        for (let iter = 0; iter < 36; iter++) {
+          // ノイマン境界 (左右壁・上端メニスカス)、下端は基準圧 p = 0
+          for (let j = 0; j < NY; j++) {
+            pKin[IX(0, j)] = pKin[IX(1, j)];
+            pKin[IX(NX - 1, j)] = pKin[IX(NX - 2, j)];
+          }
+          for (let i = 0; i < NX; i++) {
+            pKin[i] = pKin[i + NX];
+            pKin[IX(i, NY - 1)] = 0;
+          }
+
+          for (let j = 1; j < NY - 1; j++) {
+            const row = j * NX;
+            for (let i = 1; i < NX - 1; i++) {
+              const idx = row + i;
+              if (mask[idx] === 1 || fs[idx] > 0.88) continue;
+
+              const rhs =
+                (pKin[idx - 1] + pKin[idx + 1]) * INV_DX2 +
+                (pKin[idx - NX] + pKin[idx + NX]) * INV_DY2 -
+                divField[idx];
+              const pGS = rhs * invDenom;
+              pKin[idx] = oneMinusW * pKin[idx] + omega * pGS;
+            }
+          }
+        }
+
+        // 速度場の非圧縮性投影 (u = u* - dt * grad(p_kin))
+        for (let j = 1; j < NY - 1; j++) {
+          const row = j * NX;
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1 || fs[idx] > 0.88) continue;
+            u[idx] -= dt * (pKin[idx + 1] - pKin[idx - 1]) * INV_2DX;
+            v[idx] -= dt * (pKin[idx + NX] - pKin[idx - NX]) * INV_2DY;
+          }
+        }
+      }
+
+      // =======================================================================
+      // 9. 熱輸送・凝固シェル（√t則＋高温ジェット衝突による再溶解）
+      // =======================================================================
+      function stepTemperatureAndSolidification(dt) {
+        // 1) 実流速による熱移流（ジェットの高温溶湯が壁面へ熱を運ぶ）
+        advectField(TTmp, Tfield, uBack, u, v, dt, true);
+        Tfield.set(TTmp);
+
+        // 2) 熱拡散（分子＋乱流）＋ 銅モールド冷却（√t則と整合、かつ局所再溶解を許容）
+        TTmp.set(Tfield);
+        const invPrT = 1.0 / 0.85;
+
+        for (let j = 1; j < NY - 1; j++) {
+          const y = (j + 0.5) * DY;
+          const row = j * NX;
+          const sNom = calcNominalShellThickness(y);
+
+          for (let i = 1; i < NX - 1; i++) {
+            const idx = row + i;
+            if (mask[idx] === 1) {
+              Tfield[idx] = params.T_cast;
+              continue;
+            }
+
+            const Tc = TTmp[idx];
+            const alphaEff = Math.min(0.0012, PHYS.ALPHA_0 * 2.5 + nuT[idx] * invPrT);
+            const lapT =
+              (TTmp[idx - 1] - 2.0 * Tc + TTmp[idx + 1]) * INV_DX2 +
+              (TTmp[idx - NX] - 2.0 * Tc + TTmp[idx + NX]) * INV_DY2;
+
+            // 基準1D凝固プロファイル（√t則）への熱的緩和 + ジェット対流による過熱再溶解
+            const x = (i + 0.5) * DX;
+            const dWall = Math.min(x, derived.W_m - x);
+            let Tbase;
+            if (dWall < sNom) {
+              const frac = dWall / Math.max(0.003, sNom);
+              Tbase = (PHYS.T_SOL - 130.0) + (PHYS.T_LIQ - (PHYS.T_SOL - 130.0)) * frac;
+            } else {
+              const bl = Math.min(1.0, (dWall - sNom) / 0.032);
+              Tbase = PHYS.T_LIQ + (params.T_cast - PHYS.T_LIQ) * Math.pow(bl, 0.72);
+            }
+
+            // ジェット衝突・高流速域では対流熱伝達が勝り、シェル界面が再溶解（局所薄肉化）する
+            const spd = Math.hypot(u[idx], v[idx]);
+            const impingeHeat = spd > 0.08 ? Math.min(1.0, (spd - 0.08) * 2.4) * (params.T_cast - Tc) * 0.45 : 0;
+
+            // 格子幅非依存の冷却緩和率（操作時に数秒で滑らかに新条件のシェルへ追従）
+            const relaxRate = dWall < sNom * 1.15 ? 0.42 : 0.14;
+            const dT = (alphaEff * lapT + (Tbase - Tc) * relaxRate + impingeHeat) * dt;
+            Tfield[idx] = Math.max(520.0, Math.min(params.T_cast + 2.0, Tc + dT));
+          }
+        }
+
+        // ノズル吐出口近傍は鋳造温度を供給
+        const { iLeft, iRight, jPort } = senGeom;
+        for (let j = Math.max(2, jPort - 1); j <= Math.min(NY - 5, jPort + 1); j++) {
+          const row = j * NX;
+          if (iLeft - 1 > 1) Tfield[row + iLeft - 1] = Tfield[row + iLeft - 1] * 0.3 + params.T_cast * 0.7;
+          if (iRight + 1 < NX - 2) Tfield[row + iRight + 1] = Tfield[row + iRight + 1] * 0.3 + params.T_cast * 0.7;
+        }
+
+        // 境界温度
+        for (let j = 0; j < NY; j++) {
+          Tfield[IX(0, j)] = Math.max(480.0, Tfield[IX(1, j)] - 25.0);
+          Tfield[IX(NX - 1, j)] = Math.max(480.0, Tfield[IX(NX - 2, j)] - 25.0);
+        }
+        for (let i = 1; i < NX - 1; i++) {
+          if (mask[i] === 0) Tfield[i] = Tfield[i + NX] - 1.5;
+          Tfield[IX(i, NY - 1)] = Tfield[IX(i, NY - 2)];
+        }
+
+        updateSolidFractionAndShells();
+      }
+
+      /** 固相率 f_s と左右シェル厚・広面液相厚み T_liq の更新 */
+      function updateSolidFractionAndShells() {
+        const invRange = 1.0 / (PHYS.T_LIQ - PHYS.T_SOL);
+        for (let k = 0; k < N; k++) {
+          if (mask[k] === 1) {
+            fs[k] = 0;
+            continue;
+          }
+          const f = (PHYS.T_LIQ - Tfield[k]) * invRange;
+          fs[k] = f <= 0 ? 0 : f >= 1 ? 1 : f;
+        }
+
+        const midI = Math.floor(NX / 2);
+        for (let j = 0; j < NY; j++) {
+          const row = j * NX;
+
+          // 左壁シェル厚 (f_s = 0.5)
+          let sL = 0;
+          for (let i = 1; i < midI - 3; i++) {
+            const fc = fs[row + i];
+            if (fc < 0.5) {
+              const fp = fs[row + i - 1];
+              const frac = (fp - 0.5) / Math.max(1e-4, fp - fc);
+              sL = (i - 1 + Math.max(0, Math.min(1, frac))) * DX;
+              break;
+            }
+            sL = i * DX;
+          }
+          shellL[j] = sL;
+
+          // 右壁シェル厚 (f_s = 0.5)
+          let sR = 0;
+          for (let i = NX - 2; i > midI + 3; i--) {
+            const fc = fs[row + i];
+            if (fc < 0.5) {
+              const fp = fs[row + i + 1];
+              const frac = (fp - 0.5) / Math.max(1e-4, fp - fc);
+              sR = (NX - 1 - (i + 1) + Math.max(0, Math.min(1, frac))) * DX;
+              break;
+            }
+            sR = (NX - 1 - i) * DX;
+          }
+          shellR[j] = sR;
+
+          // 広面（奥行き方向）の液相厚み T_liq = max(0.025, T - 2 * s_broad)
+          const sBroad = 0.5 * (sL + sR);
+          thickLiq[j] = Math.max(0.025, derived.T_m - 2.0 * sBroad);
+        }
+
+        const exitJ = Math.min(NY - 1, Math.floor(PHYS.L_MOLD * INV_DY));
+        stats.exitShellMm = 0.5 * (shellL[exitJ] + shellR[exitJ]) * 1000.0;
+      }
+
+      // =======================================================================
+      // 10. 物理式に基づくメニスカス（湯面）波高計算
+      //     η_eq(x) = ΔP_top(x) / (ρg) （体積保存・過剰増幅なし・減衰重力波）
+      // =======================================================================
+      function stepMeniscus(dt) {
+        const { iLeft, iRight } = senGeom;
+
+        // 1) 湯面直下の物理圧力ヘッド φ = p_kin + 0.5*max(0,-vy)^2 - 0.5*ux^2
+        let sumPhi = 0;
+        let cntFluid = 0;
+        let maxUsurf = 0;
+
+        for (let i = 1; i < NX - 1; i++) {
+          const isSolid = (i >= iLeft && i <= iRight) || fs[IX(i, 1)] > 0.65;
+          if (isSolid) {
+            etaEq[i] = 0;
+            continue;
+          }
+          const uSurf = u[IX(i, 1)];
+          const uAbs = Math.abs(uSurf);
+          if (uAbs > maxUsurf) maxUsurf = uAbs;
+
+          const vUp = Math.max(0, -0.5 * (v[IX(i, 2)] + v[IX(i, 3)]));
+          // SORの物理圧力 pKin (m²/s²) + 衝突動圧 - 水平ベルヌーイ吸引圧
+          const phi = 0.72 * pKin[IX(i, 1)] + 0.5 * vUp * vUp - 0.42 * uSurf * uSurf;
+          etaEq[i] = phi;
+          sumPhi += phi;
+          cntFluid++;
+        }
+
+        const meanPhi = cntFluid > 0 ? sumPhi / cntFluid : 0;
+
+        // 2) 体積保存（空間平均差引）＆ 真の重力除算 ΔP / (ρg) [m]
+        for (let i = 1; i < NX - 1; i++) {
+          const isSolid = (i >= iLeft && i <= iRight) || fs[IX(i, 1)] > 0.65;
+          if (isSolid) {
+            etaEq[i] = 0;
+          } else {
+            // 物理上限は安全クランプ (±25 mm)
+            etaEq[i] = Math.max(-0.025, Math.min(0.025, (etaEq[i] - meanPhi) / PHYS.G));
+          }
+        }
+
+        // 格子スケールノイズを抑える軽い3点平滑化（1パス）
+        for (let i = 2; i < NX - 2; i++) {
+          if ((i >= iLeft && i <= iRight) || fs[IX(i, 1)] > 0.65) continue;
+          const prevSolid = (i - 1 >= iLeft && i - 1 <= iRight) || fs[IX(i - 1, 1)] > 0.65;
+          const nextSolid = (i + 1 >= iLeft && i + 1 <= iRight) || fs[IX(i + 1, 1)] > 0.65;
+          const eL = prevSolid ? etaEq[i] : etaEq[i - 1];
+          const eR = nextSolid ? etaEq[i] : etaEq[i + 1];
+          etaEq[i] = 0.25 * eL + 0.5 * etaEq[i] + 0.25 * eR;
+        }
+
+        // 3) 減衰重力波方程式で滑らかに更新（臨界減衰寄りで数値振動ゼロ）
+        const omega0 = 7.5;   // 固有角周波数 [rad/s]
+        const zeta = 0.88;    // 減衰比（オーバーシュート・数値振動を完全防止）
+        const cWave2 = 0.008; // 表面張力・重力横伝播項
+
+        let minH = 0;
+        let maxH = 0;
+
+        for (let i = 1; i < NX - 1; i++) {
+          const isSolid = (i >= iLeft && i <= iRight) || fs[IX(i, 1)] > 0.65;
+          if (isSolid) {
+            eta[i] = 0;
+            etaV[i] = 0;
+            continue;
+          }
+
+          const eL = (i - 1 >= iLeft && i - 1 <= iRight) ? eta[i] : eta[i - 1];
+          const eR = (i + 1 >= iLeft && i + 1 <= iRight) ? eta[i] : eta[i + 1];
+          const d2e = (eL - 2.0 * eta[i] + eR) * INV_DX2;
+
+          const acc = omega0 * omega0 * (etaEq[i] - eta[i]) + cWave2 * d2e - 2.0 * zeta * omega0 * etaV[i];
+          etaV[i] += acc * dt;
+          eta[i] = Math.max(-0.025, Math.min(0.025, eta[i] + etaV[i] * dt));
+
+          if (eta[i] < minH) minH = eta[i];
+          if (eta[i] > maxH) maxH = eta[i];
+        }
+
+        stats.uMaxSurf = stats.uMaxSurf * 0.84 + maxUsurf * 0.16;
+        const p2pMm = (maxH - minH) * 1000.0;
+        stats.wavePeakMm = stats.wavePeakMm * 0.85 + p2pMm * 0.15;
+      }
+
+      // =======================================================================
+      // 11. 粒子追跡 (ガス気泡・介在物)・巻き込み発生・凝固シェル捕捉判定
+      // =======================================================================
+      function samplePointFields(x, y) {
+        const gx = x * INV_DX - 0.5;
+        const gy = y * INV_DY - 0.5;
+        return {
+          uf: sampleGrid(u, gx, gy),
+          vf: sampleGrid(v, gx, gy),
+          fSol: sampleGrid(fs, gx, gy),
+          nuTurb: sampleGrid(nuT, gx, gy),
+          omega: sampleGrid(vort, gx, gy)
+        };
+      }
+
+      function createParticle(type, x, y, vx, vy, source) {
+        let d, rho;
+        if (type === 'gas') {
+          // ガス気泡: 0.2 〜 2.0 mm
+          const r = Math.random();
+          d = (0.2 + 1.8 * r * r) * 1e-3;
+          rho = 1.1;
+        } else {
+          // 介在物: 30 〜 300 μm, ρ_p ≈ 2800 kg/m³
+          const r = Math.random();
+          d = (30 + 270 * r * r) * 1e-6;
+          rho = 2800.0;
+        }
+        return {
+          type,
+          source, // 'nozzle' | 'surface'
+          x,
+          y,
+          vx,
+          vy,
+          d,
+          rho,
+          state: 'active', // 'active' | 'trapped'
+          age: 0,
+          trail: [{ x, y }]
+        };
+      }
+
+      /** 粒子発生：(a) ノズル流入 (H低下でTD渦急増)  (b) メニスカスKHせん断巻き込み */
+      function spawnParticles(dt) {
+        if (particles.length >= MAX_PARTICLES) return;
+
+        const { iLeft, iRight, xLeft, xRight, yPort } = senGeom;
+        const vPort = derived.vPort3D;
+        const rad = (params.angle * Math.PI) / 180.0;
+
+        // --- (a) ノズル吐出流からの持ち込み ---
+        // 標準条件 (H=450mm) は微量 (約1.6個/s)、H < 260mm でTD吸い込み渦により急増
+        const tdVortex = params.H < 260 ? 1.0 + Math.pow((260 - params.H) / 110.0, 2.1) * 8.5 : 1.0;
+        const flowScale = Math.max(0.45, derived.Q_lmin / 16.2);
+        const tempZnFactor = params.T_cast > 1070 ? 1.0 + (params.T_cast - 1070) / 50.0 * 0.8 : 1.0;
+        const nozRate = 1.5 * Math.sqrt(flowScale) * tdVortex * tempZnFactor * dt;
+
+        const nNoz = Math.floor(nozRate) + (Math.random() < (nozRate % 1) ? 1 : 0);
+        for (let k = 0; k < nNoz; k++) {
+          if (particles.length >= MAX_PARTICLES) break;
+          const isR = Math.random() < 0.5;
+          const px = isR ? xRight + DX * 0.45 : xLeft - DX * 0.45;
+          const py = yPort + (Math.random() - 0.5) * 0.020;
+          const vx = (isR ? 1 : -1) * vPort * 0.75 * Math.cos(rad);
+          const vy = -vPort * 0.75 * Math.sin(rad);
+
+          // 低ヘッドTD渦ではスラグ介在物とガス気泡の両方が増加
+          const gasProb = params.H < 260 ? 0.52 : 0.44;
+          const type = Math.random() < gasProb ? 'gas' : 'inclusion';
+          particles.push(createParticle(type, px, py, vx, vy, 'nozzle'));
+          stats.srcNoz++;
+        }
+
+        // --- (b) メニスカスからの巻き込み (u_surf > 0.22 m/s または強波傾斜・渦) ---
+        // 標準条件 (u_surf ≈ 0.06 m/s) ではほぼゼロになる
+        for (let i = 3; i < NX - 3; i++) {
+          if (particles.length >= MAX_PARTICLES) break;
+          if (i >= iLeft - 1 && i <= iRight + 1) continue;
+          if (fs[IX(i, 1)] > 0.45) continue;
+
+          const uSurf = u[IX(i, 1)];
+          const uAbs = Math.abs(uSurf);
+          const vDown = v[IX(i, 2)];
+          const wMag = Math.abs(vort[IX(i, 2)]);
+          const slope = Math.abs(eta[i + 1] - eta[i - 1]) * INV_2DX;
+
+          let prob = 0;
+          // 1) Kelvin-Helmholtz せん断巻き込み
+          if (uAbs > PHYS.U_CRIT) {
+            const ex = uAbs - PHYS.U_CRIT;
+            prob += (ex * 2.4 + ex * ex * 9.0) * (1.0 + slope * 6.0) * dt;
+          }
+          // 2) 高波傾斜・強渦による吸い込み
+          if (slope > 0.045 && vDown > 0.02) {
+            prob += (slope - 0.045) * 14.0 * dt;
+          }
+          if (wMag > 16.0 && vDown > 0.04 && uAbs > 0.16) {
+            prob += ((wMag - 16.0) / 30.0) * vDown * 2.5 * dt;
+          }
+
+          if (prob > 0 && Math.random() < prob) {
+            const px = (i + Math.random()) * DX;
+            const py = 0.012 + Math.random() * 0.010;
+            // 湯面巻き込みはフラックス・酸化皮膜介在物が約65%、ガス気泡が35%
+            const type = Math.random() < 0.65 ? 'inclusion' : 'gas';
+            particles.push(createParticle(type, px, py, uSurf * 0.75, Math.max(0.06, vDown + 0.08), 'surface'));
+            stats.srcSurf++;
+          }
+        }
+      }
+
+      /** 粒子運動積分（Schiller-Naumann + Eötvös終端速度補正 + 捕捉判定） */
+      function stepParticles(dt) {
+        const vCast = derived.Vc_ms;
+        const { xLeft, xRight, yBot } = senGeom;
+
+        for (let k = particles.length - 1; k >= 0; k--) {
+          const p = particles[k];
+          p.age += dt;
+
+          if (p.state === 'trapped') {
+            // 凝固シェルに捕捉された欠陥はスラブ速度 Vc で下降
+            p.y += vCast * dt;
+            if (p.y >= PHYS.L) {
+              particles.splice(k, 1);
+            }
+            continue;
+          }
+
+          const fld = samplePointFields(p.x, p.y);
+          const urx = fld.uf - p.vx;
+          const ury = fld.vf - p.vy;
+          const uRel = Math.hypot(urx, ury);
+
+          // 粒子レイノルズ数 & Schiller-Naumann 抗力係数
+          const ReP = Math.max(1e-4, (uRel * p.d) / PHYS.NU_0);
+          let Cd = ReP < 1000.0
+            ? (24.0 / ReP) * (1.0 + 0.15 * Math.pow(ReP, 0.687))
+            : 0.44;
+
+          // ガス気泡のEötvös数による変形・終端速度補正 (Tomiyama型)
+          if (p.type === 'gas') {
+            const Eo = (PHYS.G * (PHYS.RHO - p.rho) * p.d * p.d) / PHYS.SIGMA;
+            const CdEo = (8.0 / 3.0) * (Eo / (Eo + 4.0));
+            if (CdEo > Cd) Cd = CdEo;
+          }
+
+          // 仮想質量 C_vm = 0.5
+          const effRho = p.rho + 0.5 * PHYS.RHO;
+          const invTau = (0.75 * PHYS.RHO * Cd * Math.max(uRel, 1e-4)) / (effRho * p.d);
+          let aBuoy = -PHYS.G * ((PHYS.RHO - p.rho) / effRho);
+
+          if (p.type === 'gas') {
+            // 溶融金属中気泡のMendelson波状終端速度上限
+            const vTerm = Math.min(0.32, Math.sqrt((2.0 * PHYS.SIGMA) / (PHYS.RHO * p.d) + 0.5 * PHYS.G * p.d));
+            if (-ury > vTerm) aBuoy *= 0.2;
+          }
+
+          // SGS乱流分散ランダムウォーク
+          const uRms = Math.sqrt(Math.max(0, fld.nuTurb * (Math.abs(fld.omega) + 1.5))) * 0.75;
+          const randU = (Math.random() - 0.5) * 2.0 * uRms;
+          const randV = (Math.random() - 0.5) * 2.0 * uRms;
+
+          // 指数積分（微小介在物でも無条件安定）
+          const expF = Math.exp(-invTau * dt);
+          const tgtVx = fld.uf + randU;
+          const tgtVy = fld.vf + randV + aBuoy / Math.max(invTau, 1.0);
+
+          p.vx = tgtVx + (p.vx - tgtVx) * expF;
+          p.vy = tgtVy + (p.vy - tgtVy) * expF;
+
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+
+          // 軌跡記録
+          if (p.trail.length === 0 || Math.hypot(p.x - p.trail[p.trail.length - 1].x, p.y - p.trail[p.trail.length - 1].y) > 0.004) {
+            p.trail.push({ x: p.x, y: p.y });
+            if (p.trail.length > 14) p.trail.shift();
+          }
+
+          // ノズル壁回避
+          if (p.y < yBot && p.x > xLeft && p.x < xRight) {
+            if (p.x < derived.W_m * 0.5) {
+              p.x = xLeft - 0.002;
+              p.vx = -Math.abs(p.vx) * 0.4;
+            } else {
+              p.x = xRight + 0.002;
+              p.vx = Math.abs(p.vx) * 0.4;
+            }
+          }
+
+          // 1) メニスカス浮上排出判定
+          const iCol = Math.max(0, Math.min(NX - 1, Math.floor(p.x * INV_DX)));
+          const surfY = Math.max(0.003, 0.007 - eta[iCol]);
+          const isJustEntrained = p.source === 'surface' && p.age < 0.35;
+          if (p.y <= surfY && !isJustEntrained) {
+            stats.escaped++;
+            particles.splice(k, 1);
+            continue;
+          }
+
+          // 2) 下端通過（深部持ち込み）
+          if (p.y >= PHYS.L) {
+            stats.deep++;
+            particles.splice(k, 1);
+            continue;
+          }
+
+          // 3) 凝固界面での捕捉（Engulfment）vs 押し出し（Pushing）判定
+          const jRow = Math.max(1, Math.min(NY - 2, Math.floor(p.y * INV_DY)));
+          const sL = shellL[jRow];
+          const sR = shellR[jRow];
+          const hitL = p.x <= sL + 0.003 || (p.x < derived.W_m * 0.5 && fld.fSol >= 0.35);
+          const hitR = p.x >= derived.W_m - sR - 0.003 || (p.x > derived.W_m * 0.5 && fld.fSol >= 0.35);
+
+          if ((hitL || hitR) && p.y > 0.020) {
+            // 局所凝固成長速度 V_sol = (ds/dy) * Vc
+            const dsdy = hitL
+              ? Math.max(0, (shellL[jRow + 1] - shellL[jRow - 1]) * INV_2DY)
+              : Math.max(0, (shellR[jRow + 1] - shellR[jRow - 1]) * INV_2DY);
+            const vSol = dsdy * vCast;
+
+            // 壁面洗い流し流速（ウォッシング効果）
+            const vWash = Math.abs(fld.vf - vCast);
+
+            const sizeFactor = Math.min(1.5, 0.45 + (p.d * 1000.0) * 0.65);
+            const solFactor = Math.min(2.0, 0.55 + (vSol / 0.00035) * 0.75);
+            const washResist = 1.0 / (1.0 + Math.pow(vWash / 0.12, 1.8));
+            const probTrap = Math.max(0.08, Math.min(0.94, 0.52 * sizeFactor * solFactor * washResist));
+
+            if (Math.random() < probTrap) {
+              p.state = 'trapped';
+              p.x = hitL
+                ? Math.max(0.002, Math.min(sL, p.x))
+                : Math.min(derived.W_m - 0.002, Math.max(derived.W_m - sR, p.x));
+              p.vx = 0;
+              p.vy = vCast;
+
+              stats.trapped++;
+              secAcc.trapped++;
+
+              // 鋳片表層からの深さ (0〜50 mm) をヒストグラムへ集計
+              const depthMm = Math.min(p.x, derived.W_m - p.x) * 1000.0;
+              if (depthMm <= HIST_MAX_MM) {
+                const bin = Math.min(HIST_BINS - 1, Math.max(0, Math.floor(depthMm / HIST_BIN_MM)));
+                if (p.type === 'gas') histGas[bin]++;
+                else histInc[bin]++;
+              }
+            } else {
+              // 再浮上・押し出し
+              p.x = hitL ? sL + 0.006 : derived.W_m - sR - 0.006;
+              p.vx = hitL ? Math.max(0.02, Math.abs(p.vx) * 0.45) : -Math.max(0.02, Math.abs(p.vx) * 0.45);
+            }
+          }
+        }
+      }
+
+      /** 流線トレーサー更新 */
+      function stepTracers(dt) {
+        if (!view.showFlow) return;
+        const { xLeft, xRight, yBot } = senGeom;
+        for (let k = 0; k < tracers.length; k++) {
+          const tr = tracers[k];
+          tr.life--;
+          const fld = samplePointFields(tr.x, tr.y);
+          tr.x += fld.uf * dt * 1.45;
+          tr.y += fld.vf * dt * 1.45;
+
+          const out =
+            tr.life <= 0 ||
+            tr.x < 0.008 || tr.x > derived.W_m - 0.008 ||
+            tr.y < 0.006 || tr.y > PHYS.L - 0.008 ||
+            fld.fSol > 0.55 ||
+            (tr.y < yBot && tr.x > xLeft && tr.x < xRight);
+
+          if (out) {
+            tracers[k] = spawnTracer(Math.random() < 0.48);
+          } else {
+            tr.trail.push({ x: tr.x, y: tr.y });
+            if (tr.trail.length > 13) tr.trail.shift();
+          }
+        }
+      }
+
+      // =======================================================================
+      // 12. 1フレーム物理ステップ
+      // =======================================================================
+      function stepPhysics(frameDt) {
+        const subSteps = 2;
+        const dt = frameDt / subSteps;
+
+        for (let s = 0; s < subSteps; s++) {
+          simTime += dt;
+
+          applyFluidBoundaries();
+          computeTurbulenceAndVorticity();
+
+          // 移流 (2次精度クランプ付き半ラグランジュ法)
+          advectField(uTmp, u, uBack, u, v, dt, false);
+          advectField(vTmp, v, vBack, u, v, dt, false);
+          u.set(uTmp);
+          v.set(vTmp);
+
+          // ポート局所運動量ソース + 粘性拡散 + 奥行き3D減衰 + 熱浮力 + Darcy減衰
+          applyForcesAndDiffusion(dt);
+          applyFluidBoundaries();
+
+          // SOR 圧力投影 (真の物理圧力 p_kin)
+          projectSOR(dt);
+          applyFluidBoundaries();
+
+          // 熱輸送・凝固シェル
+          stepTemperatureAndSolidification(dt);
+
+          // 物理動圧ヘッドによる実寸メニスカス波高
+          stepMeniscus(dt);
+
+          // 粒子発生・追跡
+          spawnParticles(dt);
+          stepParticles(dt);
+        }
+
+        stepTracers(frameDt);
+
+        // 1秒ごとにトレンドチャートを更新
+        secAcc.t += frameDt;
+        if (secAcc.t >= 1.0) {
+          for (let i = 0; i < TREND_LEN - 1; i++) {
+            trendU[i] = trendU[i + 1];
+            trendWave[i] = trendWave[i + 1];
+            trendTrap[i] = trendTrap[i + 1];
+          }
+          trendU[TREND_LEN - 1] = stats.uMaxSurf;
+          trendWave[TREND_LEN - 1] = stats.wavePeakMm;
+          trendTrap[TREND_LEN - 1] = (secAcc.trapped / secAcc.t) * 60.0;
+          secAcc.t = 0;
+          secAcc.trapped = 0;
+          renderTrendChart();
+        }
+      }
+
+      // =======================================================================
+      // 13. カラーマップ & 2D Canvas 描画
+      // =======================================================================
+      function cmapSpeed(spd) {
+        // 標準条件(0.05〜0.28 m/s)から高速条件(0.8+ m/s)まで視認しやすい非線形スケール
+        const vMax = Math.max(0.32, Math.min(1.0, derived.vPort3D * 1.15));
+        const t = Math.max(0, Math.min(1, Math.pow(spd / vMax, 0.78)));
+        let r, g, b;
+        if (t < 0.25) {
+          const a = t / 0.25;
+          r = 8 + a * 6; g = 18 + a * 96; b = 42 + a * 160;
+        } else if (t < 0.55) {
+          const a = (t - 0.25) / 0.30;
+          r = 14 + a * 10; g = 114 + a * 82; b = 202 - a * 80;
+        } else if (t < 0.82) {
+          const a = (t - 0.55) / 0.27;
+          r = 24 + a * 224; g = 196 - a * 34; b = 122 - a * 105;
+        } else {
+          const a = (t - 0.82) / 0.18;
+          r = 248; g = 162 - a * 108; b = 17 + a * 35;
+        }
+        return [r | 0, g | 0, b | 0];
+      }
+
+      function cmapTemp(tempC) {
+        const tMin = 840.0;
+        const tMax = Math.max(1055.0, params.T_cast);
+        const t = Math.max(0, Math.min(1, (tempC - tMin) / (tMax - tMin)));
+        let r, g, b;
+        if (t < 0.28) {
+          const a = t / 0.28;
+          r = 18 + a * 72; g = 28 + a * 16; b = 68 + a * 22;
+        } else if (t < 0.54) {
+          const a = (t - 0.28) / 0.26;
+          r = 90 + a * 138; g = 44 + a * 38; b = 90 - a * 72;
+        } else if (t < 0.82) {
+          const a = (t - 0.54) / 0.28;
+          r = 228 + a * 24; g = 82 + a * 128; b = 18 + a * 28;
+        } else {
+          const a = (t - 0.82) / 0.18;
+          r = 252 + a * 3; g = 210 + a * 40; b = 46 + a * 165;
+        }
+        return [r | 0, g | 0, b | 0];
+      }
+
+      function cmapVorticity(w) {
+        const t = Math.max(-1, Math.min(1, w / 16.0));
+        if (t >= 0) {
+          return [(16 + t * 232) | 0, (24 + t * 44) | 0, (42 - t * 20) | 0];
+        } else {
+          const a = -t;
+          return [(16 - a * 6) | 0, (24 + a * 168) | 0, (42 + a * 204) | 0];
+        }
+      }
+
+      function renderMainCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const cw = simCanvas.width / dpr;
+        const ch = simCanvas.height / dpr;
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        ctx.fillStyle = '#050911';
+        ctx.fillRect(0, 0, cw, ch);
+
+        // レイアウト（物理寸法比 W : 900 mm を正確に反映）
+        const padTop = 10;
+        const padBot = 28;
+        const padLeft = 48;
+        const padRight = 84;
+        const tdH = Math.max(70, Math.min(102, ch * 0.155));
+        const tdGap = 15;
+
+        const availW = cw - padLeft - padRight;
+        const availH = ch - padTop - tdH - tdGap - padBot;
+
+        const aspect = derived.W_m / PHYS.L;
+        let domH = availH;
+        let domW = domH * aspect;
+        if (domW > availW) {
+          domW = availW;
+          domH = domW / aspect;
+        }
+
+        const ox = padLeft + (availW - domW) * 0.5;
+        const oy = padTop + tdH + tdGap + (availH - domH) * 0.25;
+        const scale = domW / derived.W_m; // 等方ピクセルスケール [px / m]
+        const midX = ox + domW * 0.5;
+
+        // -----------------------------------------------------------
+        // A. タンディッシュ描画（湯面高さ H・吸い込み渦・ストッパー開度）
+        // -----------------------------------------------------------
+        const tdW = Math.min(availW + 8, Math.max(210, domW * 0.92));
+        const tdX = midX - tdW * 0.5;
+        const tdY = padTop;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.roundRect(tdX, tdY, tdW, tdH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        const wallT = 6;
+        const inX = tdX + wallT;
+        const inY = tdY + 5;
+        const inW = tdW - wallT * 2;
+        const inH = tdH - wallT - 5;
+
+        ctx.fillStyle = '#080e1a';
+        ctx.fillRect(inX, inY, inW, inH);
+
+        const hRatio = Math.max(0.14, Math.min(0.92, params.H / 860.0));
+        const metalH = inH * hRatio;
+        const metalY = inY + inH - metalH;
+
+        const tdGrad = ctx.createLinearGradient(0, metalY, 0, inY + inH);
+        tdGrad.addColorStop(0, '#fcd34d');
+        tdGrad.addColorStop(0.4, '#d97706');
+        tdGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = tdGrad;
+        ctx.fillRect(inX, metalY, inW, metalH);
+
+        // フラックス・木炭カバー層
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+        ctx.fillRect(inX, metalY - 3, inW, 3.5);
+
+        // H < 260 mm の吸い込み渦漏斗
+        if (params.H < 260) {
+          const rVort = (260 - params.H) / 110.0;
+          const vDepth = Math.min(metalH * 0.92, rVort * metalH * 0.88);
+          const wob = Math.sin(simTime * 15.0) * 3.0;
+          ctx.fillStyle = '#080e1a';
+          ctx.beginPath();
+          ctx.moveTo(midX - 13, metalY - 1);
+          ctx.quadraticCurveTo(midX + wob, metalY + vDepth, midX + 13, metalY - 1);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 9.5px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('⚠ TD吸い込み渦', inX + inW - 5, inY + 12);
+        }
+
+        // ストッパーロッド（開度比に応じて上下位置が変化）
+        const liftPx = 2 + (derived.stopperPct / 100.0) * 10;
+        const rodBotY = inY + inH - liftPx;
+        ctx.fillStyle = '#64748b';
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(midX - 4, tdY - 3, 8, rodBotY - tdY + 3, [0, 0, 4, 4]);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '600 9.5px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`TD H=${params.H}mm`, inX + 5, inY + 12);
+
+        // -----------------------------------------------------------
+        // B. 2D フィールドコンター描画
+        // -----------------------------------------------------------
+        const img = offImg.data;
+        for (let j = 0; j < NY; j++) {
+          const row = j * NX;
+          for (let i = 0; i < NX; i++) {
+            const idx = row + i;
+            const p4 = idx * 4;
+            let rgb;
+            if (view.mapMode === 'speed') {
+              rgb = cmapSpeed(Math.hypot(u[idx], v[idx]));
+            } else if (view.mapMode === 'temp') {
+              rgb = cmapTemp(Tfield[idx]);
+            } else {
+              rgb = cmapVorticity(vort[idx]);
+            }
+            img[p4] = rgb[0];
+            img[p4 + 1] = rgb[1];
+            img[p4 + 2] = rgb[2];
+            img[p4 + 3] = 255;
+          }
+        }
+        offCtx.putImageData(offImg, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(offCanvas, ox, oy, domW, domH);
+
+        // -----------------------------------------------------------
+        // C. 凝固シェル描画 & 等温線（液相線 955°C / 固相線 915°C）
+        // -----------------------------------------------------------
+        if (view.mapMode !== 'temp') {
+          const drawShellFill = (isRight) => {
+            ctx.beginPath();
+            ctx.moveTo(isRight ? ox + domW : ox, oy);
+            for (let j = 0; j < NY; j++) {
+              const s = isRight ? shellR[j] : shellL[j];
+              const px = isRight ? ox + (derived.W_m - s) * scale : ox + s * scale;
+              const py = oy + (j + 0.5) * DY * scale;
+              ctx.lineTo(px, py);
+            }
+            const sLast = isRight ? shellR[NY - 1] : shellL[NY - 1];
+            ctx.lineTo(isRight ? ox + (derived.W_m - sLast) * scale : ox + sLast * scale, oy + domH);
+            ctx.lineTo(isRight ? ox + domW : ox, oy + domH);
+            ctx.closePath();
+          };
+
+          const gL = ctx.createLinearGradient(ox, 0, ox + Math.max(20, domW * 0.16), 0);
+          gL.addColorStop(0, 'rgba(146, 64, 14, 0.88)');
+          gL.addColorStop(0.75, 'rgba(217, 119, 6, 0.72)');
+          gL.addColorStop(1, 'rgba(251, 191, 36, 0.50)');
+          ctx.fillStyle = gL;
+          drawShellFill(false);
+          ctx.fill();
+
+          const gR = ctx.createLinearGradient(ox + domW, 0, ox + domW - Math.max(20, domW * 0.16), 0);
+          gR.addColorStop(0, 'rgba(146, 64, 14, 0.88)');
+          gR.addColorStop(0.75, 'rgba(217, 119, 6, 0.72)');
+          gR.addColorStop(1, 'rgba(251, 191, 36, 0.50)');
+          ctx.fillStyle = gR;
+          drawShellFill(true);
+          ctx.fill();
+        }
+
+        if (view.showShell) {
+          const drawIso = (targetFs, color, lw, dash) => {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lw;
+            if (dash) ctx.setLineDash(dash);
+            const midI = Math.floor(NX / 2);
+
+            // 左側
+            ctx.beginPath();
+            let started = false;
+            for (let j = 1; j < NY - 1; j++) {
+              const row = j * NX;
+              for (let i = 1; i < midI - 3; i++) {
+                if (fs[row + i] < targetFs) {
+                  const fp = fs[row + i - 1], fc = fs[row + i];
+                  const frac = (fp - targetFs) / Math.max(1e-4, fp - fc);
+                  const px = ox + (i - 1 + Math.max(0, Math.min(1, frac))) * DX * scale;
+                  const py = oy + (j + 0.5) * DY * scale;
+                  if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+                  break;
+                }
+              }
+            }
+            ctx.stroke();
+
+            // 右側
+            ctx.beginPath();
+            started = false;
+            for (let j = 1; j < NY - 1; j++) {
+              const row = j * NX;
+              for (let i = NX - 2; i > midI + 3; i--) {
+                if (fs[row + i] < targetFs) {
+                  const fp = fs[row + i + 1], fc = fs[row + i];
+                  const frac = (fp - targetFs) / Math.max(1e-4, fp - fc);
+                  const px = ox + (i + 1 - Math.max(0, Math.min(1, frac))) * DX * scale;
+                  const py = oy + (j + 0.5) * DY * scale;
+                  if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+                  break;
+                }
+              }
+            }
+            ctx.stroke();
+            ctx.restore();
+          };
+
+          drawIso(0.08, 'rgba(254, 240, 138, 0.90)', 1.5, null);  // 液相線 955°C
+          drawIso(0.92, 'rgba(249, 115, 22, 0.90)', 1.4, [4, 3]); // 固相線 915°C
+        }
+
+        // -----------------------------------------------------------
+        // D. 流線トレーサー & 速度ベクトル
+        // -----------------------------------------------------------
+        if (view.showFlow) {
+          // 流線
+          ctx.lineWidth = 1.1;
+          for (let k = 0; k < tracers.length; k++) {
+            const tr = tracers[k];
+            if (tr.trail.length < 2) continue;
+            ctx.beginPath();
+            for (let m = 0; m < tr.trail.length; m++) {
+              const px = ox + tr.trail[m].x * scale;
+              const py = oy + tr.trail[m].y * scale;
+              if (m === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = 'rgba(226, 232, 240, 0.28)';
+            ctx.stroke();
+          }
+
+          // 速度ベクトル（物理間隔に合わせて間引き）
+          ctx.strokeStyle = 'rgba(241, 245, 249, 0.56)';
+          ctx.fillStyle = 'rgba(241, 245, 249, 0.65)';
+          ctx.lineWidth = 1.0;
+
+          const stepI = Math.max(3, Math.round(NX / Math.max(7, Math.floor(domW / 24))));
+          const stepJ = 5;
+          const vNorm = Math.max(0.25, derived.vPort3D * 0.9);
+
+          for (let j = 3; j < NY - 2; j += stepJ) {
+            const row = j * NX;
+            for (let i = 3; i < NX - 2; i += stepI) {
+              const idx = row + i;
+              if (mask[idx] === 1 || fs[idx] > 0.65) continue;
+              const ux = u[idx], vy = v[idx];
+              const spd = Math.hypot(ux, vy);
+              if (spd < 0.008) continue;
+
+              const px = ox + (i + 0.5) * DX * scale;
+              const py = oy + (j + 0.5) * DY * scale;
+              const len = Math.min(16, Math.max(3.5, (spd / vNorm) * 16));
+              const ang = Math.atan2(vy, ux);
+              const ex = px + Math.cos(ang) * len;
+              const ey = py + Math.sin(ang) * len;
+
+              ctx.beginPath();
+              ctx.moveTo(px, py);
+              ctx.lineTo(ex, ey);
+              ctx.stroke();
+
+              const hl = 3.2;
+              ctx.beginPath();
+              ctx.moveTo(ex, ey);
+              ctx.lineTo(ex - hl * Math.cos(ang - 0.52), ey - hl * Math.sin(ang - 0.52));
+              ctx.lineTo(ex - hl * Math.cos(ang + 0.52), ey - hl * Math.sin(ang + 0.52));
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+        }
+
+        // -----------------------------------------------------------
+        // E. 自由表面（メニスカス波形：実寸×1 または 拡大×5）＋ 湯面カバー層
+        // -----------------------------------------------------------
+        const wMult = view.waveScale;
+
+        // 湯面より上のクリア
+        ctx.fillStyle = '#050911';
+        ctx.beginPath();
+        ctx.moveTo(ox, oy - 36);
+        ctx.lineTo(ox + domW, oy - 36);
+        ctx.lineTo(ox + domW, oy);
+        for (let i = NX - 1; i >= 0; i--) {
+          const wx = ox + (i + 0.5) * DX * scale;
+          const wy = oy - eta[i] * scale * wMult;
+          ctx.lineTo(wx, wy);
+        }
+        ctx.lineTo(ox, oy);
+        ctx.closePath();
+        ctx.fill();
+
+        // 基準湯面レベル (y = 0 mm) の細い破線
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox + domW, oy);
+        ctx.stroke();
+        ctx.restore();
+
+        // 隆起部の溶湯描画 & フラックス/木炭カバー層 & 流速色分けライン
+        for (let i = 1; i < NX - 1; i++) {
+          const wx0 = ox + (i - 0.5) * DX * scale;
+          const wx1 = ox + (i + 0.5) * DX * scale;
+          const wy0 = oy - eta[i - 1] * scale * wMult;
+          const wy1 = oy - eta[i] * scale * wMult;
+
+          if (eta[i] > 0.0001 || eta[i - 1] > 0.0001) {
+            ctx.fillStyle = view.mapMode === 'temp' ? 'rgba(251, 191, 36, 0.72)' : 'rgba(56, 189, 248, 0.35)';
+            ctx.beginPath();
+            ctx.moveTo(wx0, oy);
+            ctx.lineTo(wx0, wy0);
+            ctx.lineTo(wx1, wy1);
+            ctx.lineTo(wx1, oy);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          // 湯面カバー層（木炭・フラックス）
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.38)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(wx0, wy0 - 2.2);
+          ctx.lineTo(wx1, wy1 - 2.2);
+          ctx.stroke();
+
+          // メニスカス界面ライン（臨界流速 0.22 m/s 超過で赤）
+          const uSurf = Math.abs(u[IX(i, 1)]);
+          ctx.strokeStyle = uSurf >= PHYS.U_CRIT ? '#ef4444' : uSurf >= 0.16 ? '#fb923c' : '#fcd34d';
+          ctx.lineWidth = uSurf >= PHYS.U_CRIT ? 2.6 : 1.8;
+          ctx.beginPath();
+          ctx.moveTo(wx0, wy0);
+          ctx.lineTo(wx1, wy1);
+          ctx.stroke();
+        }
+
+        // -----------------------------------------------------------
+        // F. 浸漬ノズル (SEN) と φ25mm 吐出ポート・角度ガイド
+        // -----------------------------------------------------------
+        const senWpx = Math.max(16, PHYS.SEN_OD * scale);
+        const senX = midX - senWpx * 0.5;
+        const senTopY = tdY + tdH - 4;
+        const portCy = oy + (params.D / 1000.0) * scale;
+        const senBotY = portCy + Math.max(11, 0.024 * scale);
+
+        const senGrad = ctx.createLinearGradient(senX, 0, senX + senWpx, 0);
+        senGrad.addColorStop(0, '#334155');
+        senGrad.addColorStop(0.5, '#64748b');
+        senGrad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = senGrad;
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.roundRect(senX, senTopY, senWpx, senBotY - senTopY, [0, 0, 5, 5]);
+        ctx.fill();
+        ctx.stroke();
+
+        // 内部縦流路
+        const boreW = Math.max(6, senWpx * 0.42);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(midX - boreW * 0.5, senTopY, boreW, portCy - senTopY + 4);
+
+        // φ25mm ポート角度描画 (-45°〜+60°)
+        const rad = (params.angle * Math.PI) / 180.0;
+        const portLen = senWpx * 0.52;
+        const dxP = Math.cos(rad) * portLen;
+        const dyP = -Math.sin(rad) * portLen;
+        const portPxH = Math.max(4.5, PHYS.D_PORT * scale);
+
+        ctx.strokeStyle = '#fcd34d';
+        ctx.lineWidth = portPxH;
+        ctx.lineCap = 'butt';
+        ctx.beginPath();
+        ctx.moveTo(midX, portCy);
+        ctx.lineTo(midX + dxP, portCy + dyP);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(midX, portCy);
+        ctx.lineTo(midX - dxP, portCy + dyP);
+        ctx.stroke();
+
+        // 吐出角度ガイド破線
+        const gLen = 28;
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = params.angle >= 15 ? 'rgba(248, 113, 113, 0.85)' : 'rgba(253, 224, 71, 0.72)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(midX + senWpx * 0.52, portCy + dyP * 0.7);
+        ctx.lineTo(midX + senWpx * 0.52 + Math.cos(rad) * gLen, portCy + dyP * 0.7 - Math.sin(rad) * gLen);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(midX - senWpx * 0.52, portCy + dyP * 0.7);
+        ctx.lineTo(midX - senWpx * 0.52 - Math.cos(rad) * gLen, portCy + dyP * 0.7 - Math.sin(rad) * gLen);
+        ctx.stroke();
+        ctx.restore();
+
+        // 角度ラベル
+        const angStr = (params.angle > 0 ? '+' : '') + params.angle + '°';
+        ctx.fillStyle = 'rgba(14, 22, 38, 0.85)';
+        ctx.strokeStyle = params.angle >= 15 ? '#ef4444' : '#f59e0b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(midX - 20, senBotY + 3, 40, 15, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = params.angle >= 15 ? '#fca5a5' : '#fde68a';
+        ctx.font = 'bold 9.5px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(angStr, midX, senBotY + 13.5);
+
+        // -----------------------------------------------------------
+        // G. 粒子と軌跡の描画
+        // -----------------------------------------------------------
+        for (let k = 0; k < particles.length; k++) {
+          const p = particles[k];
+          const px = ox + p.x * scale;
+          const py = oy + p.y * scale;
+
+          // 粒子軌跡
+          if (view.showTrails && p.state === 'active' && p.trail.length > 1) {
+            ctx.beginPath();
+            for (let m = 0; m < p.trail.length; m++) {
+              const tx = ox + p.trail[m].x * scale;
+              const ty = oy + p.trail[m].y * scale;
+              if (m === 0) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+            }
+            ctx.strokeStyle = p.type === 'gas' ? 'rgba(56, 189, 248, 0.28)' : 'rgba(251, 191, 36, 0.26)';
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+          }
+
+          const rPx = p.type === 'gas'
+            ? Math.max(2.0, Math.min(4.8, 1.7 + p.d * 1400))
+            : Math.max(1.7, Math.min(3.5, 1.5 + p.d * 6000));
+
+          if (p.state === 'trapped') {
+            ctx.beginPath();
+            ctx.arc(px, py, rPx + 2.0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(px, py, rPx + 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+            ctx.strokeStyle = '#fee2e2';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          } else if (p.type === 'gas') {
+            ctx.beginPath();
+            ctx.arc(px, py, rPx, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.34)';
+            ctx.fill();
+            ctx.strokeStyle = '#bae6fd';
+            ctx.lineWidth = 1.15;
+            ctx.stroke();
+          } else {
+            ctx.beginPath();
+            ctx.arc(px, py, rPx, 0, Math.PI * 2);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+          }
+        }
+
+        // -----------------------------------------------------------
+        // H. 水冷銅モールド (0〜700 mm)・二次冷却帯・X/Y軸mm目盛り
+        // -----------------------------------------------------------
+        const moldHpx = PHYS.L_MOLD * scale;
+        const mWall = 8;
+
+        const cuGrad = ctx.createLinearGradient(0, oy, 0, oy + moldHpx);
+        cuGrad.addColorStop(0, '#b45309');
+        cuGrad.addColorStop(0.5, '#d97706');
+        cuGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = cuGrad;
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1;
+        ctx.fillRect(ox - mWall, oy, mWall, moldHpx);
+        ctx.strokeRect(ox - mWall, oy, mWall, moldHpx);
+        ctx.fillRect(ox + domW, oy, mWall, moldHpx);
+        ctx.strokeRect(ox + domW, oy, mWall, moldHpx);
+
+        // 二次冷却ロール (700〜900 mm)
+        const subH = domH - moldHpx;
+        for (let r = 0; r < 3; r++) {
+          const ry = oy + moldHpx + ((r + 0.5) / 3) * subH;
+          ctx.fillStyle = '#334155';
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(ox - 6, ry, 5, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(ox + domW + 6, ry, 5, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        }
+
+        // モールド下端破線 (700 mm)
+        const exitY = oy + moldHpx;
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(248, 250, 252, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ox - mWall - 4, exitY);
+        ctx.lineTo(ox + domW + mWall + 4, exitY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Y軸目盛り (mm)
+        ctx.fillStyle = '#64748b';
+        ctx.font = '9.5px monospace';
+        ctx.textAlign = 'right';
+        for (const mm of [0, 200, 400, 600, 700, 900]) {
+          const ty = oy + (mm / 900.0) * domH;
+          ctx.fillText(String(mm), ox - mWall - 5, ty + 3);
+        }
+        ctx.fillText('y(mm)', ox - mWall - 4, oy - 8);
+
+        // X軸目盛り (スラブ幅 mm)
+        ctx.textAlign = 'center';
+        const xTicks = [0, Math.round(params.W * 0.25), Math.round(params.W * 0.5), Math.round(params.W * 0.75), params.W];
+        for (const xm of xTicks) {
+          const tx = ox + (xm / params.W) * domW;
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(tx - 0.5, oy + domH + 1, 1, 4);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(String(xm), tx, oy + domH + 14);
+        }
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(`スラブ幅 W = ${params.W} mm (厚み T = ${params.T} mm)`, midX, oy + domH + 24);
+
+        // 波高拡大モードインジケータ
+        if (view.waveScale > 1) {
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.18)';
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(ox + 4, oy - 20, 98, 15, 4);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#fcd34d';
+          ctx.font = 'bold 9.5px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('波高表示: 拡大 ×5', ox + 9, oy - 9.5);
+        }
+
+        // -----------------------------------------------------------
+        // I. 右側カラーバー & モールド注記
+        // -----------------------------------------------------------
+        const cbW = 11;
+        const cbH = Math.min(185, domH * 0.44);
+        const cbX = cw - 56;
+        const cbY = oy + 20;
+
+        ctx.fillStyle = 'rgba(14, 22, 38, 0.85)';
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(cbX - 9, cbY - 20, 60, cbH + 30, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        const vMaxBar = Math.max(0.32, Math.min(1.0, derived.vPort3D * 1.15));
+        for (let py = 0; py < cbH; py++) {
+          const frac = 1.0 - py / cbH;
+          let rgb;
+          if (view.mapMode === 'speed') {
+            rgb = cmapSpeed(frac * vMaxBar);
+          } else if (view.mapMode === 'temp') {
+            const tMax = Math.max(1055, params.T_cast);
+            rgb = cmapTemp(840 + frac * (tMax - 840));
+          } else {
+            rgb = cmapVorticity((frac * 2 - 1) * 16);
+          }
+          ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+          ctx.fillRect(cbX, cbY + py, cbW, 1.5);
+        }
+        ctx.strokeStyle = '#475569';
+        ctx.strokeRect(cbX, cbY, cbW, cbH);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(view.mapMode === 'speed' ? '流速 m/s' : view.mapMode === 'temp' ? '温度 °C' : '渦度 1/s', cbX + 20, cbY - 7);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'left';
+        if (view.mapMode === 'speed') {
+          ctx.fillText(vMaxBar.toFixed(2), cbX + cbW + 4, cbY + 5);
+          ctx.fillText((vMaxBar * 0.5).toFixed(2), cbX + cbW + 4, cbY + cbH * 0.5 + 3);
+          ctx.fillText('0.00', cbX + cbW + 4, cbY + cbH + 2);
+        } else if (view.mapMode === 'temp') {
+          ctx.fillText(String(Math.max(1055, params.T_cast)), cbX + cbW + 4, cbY + 5);
+          ctx.fillText('955', cbX + cbW + 4, cbY + cbH * 0.5 + 3);
+          ctx.fillText('840', cbX + cbW + 4, cbY + cbH + 2);
+        } else {
+          ctx.fillText('+16', cbX + cbW + 4, cbY + 5);
+          ctx.fillText('0', cbX + cbW + 4, cbY + cbH * 0.5 + 3);
+          ctx.fillText('-16', cbX + cbW + 4, cbY + cbH + 2);
+        }
+
+        // モールド下端ラベル
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'left';
+        const noteX = Math.min(cw - 62, ox + domW + mWall + 5);
+        ctx.fillText('銅モールド', noteX, exitY - 2);
+        ctx.fillText('下端 700mm', noteX, exitY + 9);
+
+        ctx.restore();
+      }
+
+      /** 時系列トレンドチャート描画（最大湯面流速・最大波高・捕捉/min） */
+      function renderTrendChart() {
+        const dpr = window.devicePixelRatio || 1;
+        const cw = trendCanvas.width / dpr;
+        const ch = trendCanvas.height / dpr;
+
+        trendCtx.save();
+        trendCtx.scale(dpr, dpr);
+        trendCtx.fillStyle = '#050911';
+        trendCtx.fillRect(0, 0, cw, ch);
+
+        const padL = 32, padR = 32, padT = 12, padB = 18;
+        const pw = cw - padL - padR;
+        const ph = ch - padT - padB;
+
+        const maxU = 0.50; // 左軸 0〜0.50 m/s
+        const maxW = 12.0; // 波高スケール 0〜12 mm
+        let maxTr = 60;    // 右軸 捕捉/min
+        for (let i = 0; i < TREND_LEN; i++) {
+          if (trendTrap[i] > maxTr) maxTr = trendTrap[i];
+        }
+        maxTr = Math.ceil(maxTr / 20) * 20;
+
+        // グリッド
+        trendCtx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+        trendCtx.lineWidth = 1;
+        trendCtx.font = '9px monospace';
+        for (let g = 0; g <= 2; g++) {
+          const y = padT + ph - (g / 2) * ph;
+          trendCtx.beginPath();
+          trendCtx.moveTo(padL, y);
+          trendCtx.lineTo(cw - padR, y);
+          trendCtx.stroke();
+
+          trendCtx.fillStyle = '#38bdf8';
+          trendCtx.textAlign = 'right';
+          trendCtx.fillText(((maxU * g) / 2).toFixed(2), padL - 4, y + 3);
+
+          trendCtx.fillStyle = '#f87171';
+          trendCtx.textAlign = 'left';
+          trendCtx.fillText(String(Math.round((maxTr * g) / 2)), cw - padR + 4, y + 3);
+        }
+
+        // 臨界流速 0.22 m/s 破線
+        const critY = padT + ph - (PHYS.U_CRIT / maxU) * ph;
+        trendCtx.save();
+        trendCtx.setLineDash([4, 3]);
+        trendCtx.strokeStyle = 'rgba(239, 68, 68, 0.55)';
+        trendCtx.beginPath();
+        trendCtx.moveTo(padL, critY);
+        trendCtx.lineTo(cw - padR, critY);
+        trendCtx.stroke();
+        trendCtx.restore();
+
+        const plotLine = (arr, maxV, color, lw) => {
+          trendCtx.beginPath();
+          trendCtx.strokeStyle = color;
+          trendCtx.lineWidth = lw;
+          for (let i = 0; i < TREND_LEN; i++) {
+            const x = padL + (i / (TREND_LEN - 1)) * pw;
+            const y = padT + ph - Math.min(1, arr[i] / maxV) * ph;
+            if (i === 0) trendCtx.moveTo(x, y); else trendCtx.lineTo(x, y);
+          }
+          trendCtx.stroke();
+        };
+
+        plotLine(trendU, maxU, '#38bdf8', 1.8);
+        plotLine(trendWave, maxW, '#fcd34d', 1.6);
+        plotLine(trendTrap, maxTr, '#ef4444', 1.8);
+
+        trendCtx.fillStyle = '#64748b';
+        trendCtx.textAlign = 'left';
+        trendCtx.fillText('-60s', padL, ch - 4);
+        trendCtx.textAlign = 'center';
+        trendCtx.fillStyle = '#fca5a5';
+        trendCtx.fillText('破線: u_crit=0.22 m/s (波高軸 0–12mm)', padL + pw * 0.5, ch - 4);
+        trendCtx.fillStyle = '#64748b';
+        trendCtx.textAlign = 'right';
+        trendCtx.fillText('現在', cw - padR, ch - 4);
+
+        trendCtx.restore();
+      }
+
+      /** 欠陥深さ分布ヒストグラム描画（表層 0〜50 mm） */
+      function renderHistChart() {
+        const dpr = window.devicePixelRatio || 1;
+        const cw = histCanvas.width / dpr;
+        const ch = histCanvas.height / dpr;
+
+        histCtx.save();
+        histCtx.scale(dpr, dpr);
+        histCtx.fillStyle = '#050911';
+        histCtx.fillRect(0, 0, cw, ch);
+
+        const padL = 28, padR = 10, padT = 12, padB = 19;
+        const pw = cw - padL - padR;
+        const ph = ch - padT - padB;
+
+        let maxBin = 4;
+        for (let b = 0; b < HIST_BINS; b++) {
+          const tot = histGas[b] + histInc[b];
+          if (tot > maxBin) maxBin = tot;
+        }
+        maxBin = Math.ceil(maxBin * 1.15);
+
+        histCtx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+        histCtx.lineWidth = 1;
+        histCtx.fillStyle = '#64748b';
+        histCtx.font = '9px monospace';
+        histCtx.textAlign = 'right';
+        for (let g = 0; g <= 2; g++) {
+          const y = padT + ph - (g / 2) * ph;
+          histCtx.beginPath();
+          histCtx.moveTo(padL, y);
+          histCtx.lineTo(cw - padR, y);
+          histCtx.stroke();
+          histCtx.fillText(String(Math.round((maxBin * g) / 2)), padL - 4, y + 3);
+        }
+
+        const barW = pw / HIST_BINS;
+        for (let b = 0; b < HIST_BINS; b++) {
+          const x = padL + b * barW + 1;
+          const w = Math.max(2, barW - 2);
+          const hInc = (histInc[b] / maxBin) * ph;
+          const hGas = (histGas[b] / maxBin) * ph;
+
+          if (hInc > 0) {
+            histCtx.fillStyle = '#f59e0b';
+            histCtx.fillRect(x, padT + ph - hInc, w, hInc);
+          }
+          if (hGas > 0) {
+            histCtx.fillStyle = '#38bdf8';
+            histCtx.fillRect(x, padT + ph - hInc - hGas, w, hGas);
+          }
+        }
+
+        histCtx.fillStyle = '#94a3b8';
+        histCtx.textAlign = 'center';
+        for (const mm of [0, 10, 20, 30, 40, 50]) {
+          const x = padL + (mm / HIST_MAX_MM) * pw;
+          histCtx.fillText(`${mm}mm`, Math.min(cw - 14, Math.max(padL + 10, x)), ch - 5);
+        }
+
+        histCtx.restore();
+      }
+
+      // =======================================================================
+      // 14. KPI・UI同期・CSVエクスポート
+      // =======================================================================
+      function updateKPIs() {
+        const total = stats.trapped + stats.deep + stats.escaped;
+        const trapPct = total > 0 ? (stats.trapped / total) * 100 : 0;
+        const escPct = total > 0 ? (stats.escaped / total) * 100 : 0;
+        const deepPct = total > 0 ? (stats.deep / total) * 100 : 0;
+
+        ui.kpiQ.textContent = derived.Q_lmin.toFixed(1);
+        ui.kpiMassRate.textContent = `${derived.mass_kgmin.toFixed(1)} kg/min`;
+        ui.kpiVport.textContent = derived.vPort3D.toFixed(3);
+        ui.kpiStopper.textContent = `ストッパー開度: ${derived.stopperPct.toFixed(1)}%`;
+
+        ui.kpiUsurf.textContent = stats.uMaxSurf.toFixed(2);
+        ui.kpiUcrit.textContent = `臨界 0.22 比 ${(stats.uMaxSurf / PHYS.U_CRIT).toFixed(2)}×`;
+
+        ui.kpiWave.textContent = stats.wavePeakMm.toFixed(1);
+        ui.kpiWaveSub.textContent = `Peak-to-Peak (×${view.waveScale}表示)`;
+
+        ui.kpiTrapPct.textContent = trapPct.toFixed(1);
+        ui.kpiTrapSub.textContent = `捕捉 ${stats.trapped} / 判定 ${total}個`;
+        ui.kpiExitShell.textContent = `出口シェル: ${stats.exitShellMm.toFixed(1)} mm`;
+
+        ui.txtTime.textContent = simTime.toFixed(1);
+        ui.txtDim.textContent = `${params.W} × ${params.T}`;
+        ui.txtActiveP.textContent = particles.length;
+        ui.txtSrcSurf.textContent = stats.srcSurf;
+        ui.txtSrcNoz.textContent = stats.srcNoz;
+
+        ui.cntEsc.textContent = `${stats.escaped} (${escPct.toFixed(1)}%)`;
+        ui.cntTrap.textContent = `${stats.trapped} (${trapPct.toFixed(1)}%)`;
+        ui.cntDeep.textContent = `${stats.deep} (${deepPct.toFixed(1)}%)`;
+
+        // 操業安定ステータス判定
+        const isDanger = stats.uMaxSurf >= PHYS.U_CRIT || stats.wavePeakMm >= 4.5 || params.H < 210;
+        const isWarn = !isDanger && (stats.uMaxSurf >= 0.15 || stats.wavePeakMm >= 2.0 || params.H < 260);
+
+        if (isDanger) {
+          ui.statusBadge.textContent = params.H < 210 && stats.uMaxSurf < PHYS.U_CRIT ? '巻き込み危険 (TD渦)' : '巻き込み危険 (強波立ち)';
+          ui.statusBadge.className = 'status-badge badge-danger';
+          ui.kpiUsurf.style.color = stats.uMaxSurf >= PHYS.U_CRIT ? '#ef4444' : '#38bdf8';
+        } else if (isWarn) {
+          ui.statusBadge.textContent = '注意（湯面変動増）';
+          ui.statusBadge.className = 'status-badge badge-warn';
+          ui.kpiUsurf.style.color = '#fbbf24';
+        } else {
+          ui.statusBadge.textContent = '安定（鏡面湯面）';
+          ui.statusBadge.className = 'status-badge badge-safe';
+          ui.kpiUsurf.style.color = '#38bdf8';
+        }
+      }
+
+      function syncUI() {
+        updateDerivedAndGrid();
+
+        ui.rngW.value = params.W; ui.valW.textContent = `${params.W} mm`;
+        ui.rngT.value = params.T; ui.valT.textContent = `${params.T} mm`;
+        ui.rngVc.value = params.Vc; ui.valVc.textContent = `${params.Vc} mm/min`;
+        ui.rngD.value = params.D; ui.valD.textContent = `${params.D} mm`;
+        ui.rngAngle.value = params.angle;
+        ui.valAngle.textContent = (params.angle > 0 ? '+' : '') + `${params.angle}°`;
+
+        if (params.angle >= 30) {
+          ui.tagAngle.textContent = '急上向き'; ui.tagAngle.className = 'mini-tag tag-red';
+        } else if (params.angle > 0) {
+          ui.tagAngle.textContent = '上向き'; ui.tagAngle.className = 'mini-tag tag-orange';
+        } else if (params.angle === 0) {
+          ui.tagAngle.textContent = '水平'; ui.tagAngle.className = 'mini-tag tag-sky';
+        } else if (params.angle <= -30) {
+          ui.tagAngle.textContent = '急下向き'; ui.tagAngle.className = 'mini-tag tag-sky';
+        } else {
+          ui.tagAngle.textContent = '下向き'; ui.tagAngle.className = 'mini-tag tag-green';
+        }
+
+        ui.rngTemp.value = params.T_cast;
+        ui.valTemp.textContent = `${params.T_cast} °C`;
+        ui.lblSup.textContent = `ΔT = ${params.T_cast - PHYS.T_LIQ}°C`;
+
+        ui.rngH.value = params.H;
+        ui.valH.textContent = `${params.H} mm`;
+        ui.tagTD.classList.toggle('hidden', params.H >= 260);
+
+        ui.specFlow.textContent = `v_port = ${derived.vPort3D.toFixed(3)} m/s`;
+        ui.specTorricelli.textContent = `トリチェリ理論流速 √(2gH) = ${derived.vTorricelli.toFixed(2)} m/s`;
+        ui.specOpening.textContent = `ストッパー開度比: ${derived.stopperPct.toFixed(1)}%`;
+
+        updateKPIs();
+      }
+
+      function showToast(msg) {
+        ui.toast.textContent = msg;
+        ui.toast.classList.add('show');
+        clearTimeout(showToast._tid);
+        showToast._tid = setTimeout(() => ui.toast.classList.remove('show'), 2200);
+      }
+
+      function exportCSV() {
+        try {
+          const total = stats.trapped + stats.deep + stats.escaped;
+          const pct = (n) => (total > 0 ? ((n / total) * 100).toFixed(2) : '0.00');
+          const rows = [
+            ['項目', '値', '単位/備考'],
+            ['合金種', 'C2600 (70Cu-30Zn)', 'ρ=7800 kg/m³, TL=955°C, TS=915°C'],
+            ['経過時間', simTime.toFixed(2), 's'],
+            ['スラブ幅 W', params.W, 'mm'],
+            ['スラブ厚み T', params.T, 'mm'],
+            ['引き抜き速度 Vc', params.Vc, 'mm/min'],
+            ['ノズル浸漬深さ D', params.D, 'mm'],
+            ['ノズル吐出角度 θ', params.angle, 'deg (正=上向き)'],
+            ['鋳造温度 T_cast', params.T_cast, '°C'],
+            ['過熱度 ΔT', params.T_cast - PHYS.T_LIQ, '°C'],
+            ['タンディッシュ湯面高さ H', params.H, 'mm'],
+            ['ノズル吐出口仕様', '左右2孔 φ25 mm', '総面積 9.817 cm²'],
+            ['', '', ''],
+            ['--- 物理計算・テレメトリ ---', '', ''],
+            ['体積流量 Q', derived.Q_lmin.toFixed(3), 'L/min'],
+            ['質量鋳造量', derived.mass_kgmin.toFixed(2), 'kg/min'],
+            ['3D実吐出流速 v_port', derived.vPort3D.toFixed(4), 'm/s'],
+            ['トリチェリ理論流速 √(2gH)', derived.vTorricelli.toFixed(3), 'm/s'],
+            ['ストッパー開度比', derived.stopperPct.toFixed(2), '%'],
+            ['最大湯面流速 u_surf', stats.uMaxSurf.toFixed(4), 'm/s'],
+            ['最大メニスカス波高 Δh (実寸)', stats.wavePeakMm.toFixed(3), 'mm'],
+            ['モールド出口シェル厚 (y=700mm)', stats.exitShellMm.toFixed(2), 'mm'],
+            ['湯面浮上排出数', `${stats.escaped} (${pct(stats.escaped)}%)`, '個 (%)'],
+            ['凝固シェル捕捉数 (欠陥)', `${stats.trapped} (${pct(stats.trapped)}%)`, '個 (%)'],
+            ['深部持ち込み数', `${stats.deep} (${pct(stats.deep)}%)`, '個 (%)'],
+            ['発生源: メニスカス巻き込み', stats.srcSurf, '個'],
+            ['発生源: ノズル流入', stats.srcNoz, '個'],
+            ['', '', ''],
+            ['--- 欠陥深さ分布 (表層 0-50mm) ---', '', ''],
+            ['表層深さ区間 (mm)', 'ガス気泡', '介在物', '合計']
+          ];
+          for (let b = 0; b < HIST_BINS; b++) {
+            const d0 = (b * HIST_BIN_MM).toFixed(1);
+            const d1 = ((b + 1) * HIST_BIN_MM).toFixed(1);
+            rows.push([`${d0}-${d1}`, histGas[b], histInc[b], histGas[b] + histInc[b]]);
+          }
+
+          const csv = '\uFEFF' + rows.map((r) => r.join(',')).join('\r\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `brass_c2600_W${params.W}_T${params.T}_Vc${params.Vc}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('CSVデータを出力しました');
+        } catch (err) {
+          console.error('CSV export failed:', err);
+          showToast('CSV出力に失敗しました');
+        }
+      }
+
+      // =======================================================================
+      // 15. リサイズ & イベント登録
+      // =======================================================================
+      function resizeAll() {
+        try {
+          const dpr = window.devicePixelRatio || 1;
+          const rMain = simStage.getBoundingClientRect();
+          simCanvas.width = Math.max(300, Math.floor(rMain.width * dpr));
+          simCanvas.height = Math.max(400, Math.floor(rMain.height * dpr));
+
+          const rT = trendCanvas.parentElement.getBoundingClientRect();
+          trendCanvas.width = Math.max(200, Math.floor(rT.width * dpr));
+          trendCanvas.height = Math.max(100, Math.floor(rT.height * dpr));
+
+          const rH = histCanvas.parentElement.getBoundingClientRect();
+          histCanvas.width = Math.max(200, Math.floor(rH.width * dpr));
+          histCanvas.height = Math.max(100, Math.floor(rH.height * dpr));
+
+          renderMainCanvas();
+          renderTrendChart();
+          renderHistChart();
+        } catch (err) {
+          console.error('Resize error:', err);
+        }
+      }
+
+      function clearPresetHighlight() {
+        document.querySelectorAll('#presetGrid .preset-btn').forEach((b) => b.classList.remove('active-preset'));
+      }
+
+      function bindRange(el, key, rescaleParticles = false) {
+        el.addEventListener('input', (e) => {
+          const oldW = derived.W_m;
+          params[key] = parseFloat(e.target.value);
+          clearPresetHighlight();
+          syncUI();
+          if (rescaleParticles && oldW > 0) {
+            const ratio = derived.W_m / oldW;
+            for (let k = 0; k < particles.length; k++) {
+              particles[k].x *= ratio;
+              particles[k].trail = [];
+            }
+            for (let k = 0; k < tracers.length; k++) {
+              tracers[k].x *= ratio;
+              tracers[k].trail = [{ x: tracers[k].x, y: tracers[k].y }];
+            }
+          }
+          renderMainCanvas();
+        });
+      }
+
+      bindRange(ui.rngW, 'W', true);
+      bindRange(ui.rngT, 'T');
+      bindRange(ui.rngVc, 'Vc');
+      bindRange(ui.rngD, 'D');
+      bindRange(ui.rngAngle, 'angle');
+      bindRange(ui.rngTemp, 'T_cast');
+      bindRange(ui.rngH, 'H');
+
+      // プリセット切替
+      document.querySelectorAll('#presetGrid .preset-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-preset');
+          if (!PRESETS[key]) return;
+          const prevW = derived.W_m;
+          Object.assign(params, PRESETS[key]);
+          document.querySelectorAll('#presetGrid .preset-btn').forEach((b) => b.classList.toggle('active-preset', b === btn));
+          syncUI();
+          if (Math.abs(prevW - derived.W_m) > 1e-4) {
+            initFields(true);
+            for (let i = 0; i < 20; i++) stepPhysics(0.016);
+          }
+          clearParticlesAndStats();
+          showToast(`プリセット適用: ${btn.querySelector('.preset-name').firstChild.textContent.trim()}`);
+        });
+      });
+
+      // 背景マップ切替
+      document.querySelectorAll('#mapTabs .seg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          view.mapMode = btn.getAttribute('data-map');
+          document.querySelectorAll('#mapTabs .seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
+          renderMainCanvas();
+        });
+      });
+
+      // 波高表示倍率切替 (×1 / ×5)
+      document.querySelectorAll('#waveScaleTabs .seg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          view.waveScale = parseInt(btn.getAttribute('data-wscale'), 10) || 1;
+          document.querySelectorAll('#waveScaleTabs .seg-btn').forEach((b) => b.classList.toggle('active-brass', b === btn));
+          updateKPIs();
+          renderMainCanvas();
+        });
+      });
+
+      ui.chkFlow.addEventListener('change', (e) => { view.showFlow = e.target.checked; renderMainCanvas(); });
+      ui.chkShell.addEventListener('change', (e) => { view.showShell = e.target.checked; renderMainCanvas(); });
+      ui.chkTrails.addEventListener('change', (e) => { view.showTrails = e.target.checked; renderMainCanvas(); });
+
+      ui.btnPause.addEventListener('click', () => {
+        view.paused = !view.paused;
+        ui.pauseIcon.textContent = view.paused ? '▶' : '⏸';
+        ui.pauseText.textContent = view.paused ? '再生' : '一時停止';
+        ui.runDot.className = view.paused ? 'dot dot-pause' : 'dot dot-run';
+      });
+
+      ui.btnClearP.addEventListener('click', () => {
+        clearParticlesAndStats();
+        showToast('粒子と集計をクリアしました');
+      });
+
+      ui.btnReset.addEventListener('click', () => {
+        Object.assign(params, DEFAULTS);
+        document.querySelectorAll('#presetGrid .preset-btn').forEach((b) => {
+          b.classList.toggle('active-preset', b.getAttribute('data-preset') === 'standard');
+        });
+        syncUI();
+        initFields(true);
+        for (let i = 0; i < 24; i++) stepPhysics(0.016);
+        clearParticlesAndStats();
+        renderMainCanvas();
+        showToast('標準安定操業へリセットしました');
+      });
+
+      ui.btnCSV.addEventListener('click', exportCSV);
+      window.addEventListener('resize', resizeAll);
+
+      // =======================================================================
+      // 16. メインアニメーションループ
+      // =======================================================================
+      let histTick = 0;
+
+      function animate(ts) {
+        requestAnimationFrame(animate);
+        if (!lastTs) lastTs = ts;
+        const rawDt = (ts - lastTs) / 1000.0;
+        lastTs = ts;
+
+        fpsFrames++;
+        fpsTimer += rawDt;
+        if (fpsTimer >= 0.5) {
+          ui.txtFps.textContent = String(Math.round(fpsFrames / fpsTimer));
+          fpsFrames = 0;
+          fpsTimer = 0;
+        }
+
+        if (!view.paused) {
+          try {
+            const dt = Math.min(0.022, Math.max(0.008, rawDt));
+            stepPhysics(dt);
+            updateKPIs();
+            histTick++;
+            if (histTick >= 10) {
+              renderHistChart();
+              histTick = 0;
+            }
+          } catch (err) {
+            console.error('Simulation step error:', err);
+          }
+        }
+
+        renderMainCanvas();
+      }
+
+      window.addEventListener('load', () => {
+        syncUI();
+        initFields(true);
+        resizeAll();
+        // 定常ジェットを立ち上げてから集計開始
+        for (let i = 0; i < 30; i++) {
+          stepPhysics(0.016);
+        }
+        clearParticlesAndStats();
+        requestAnimationFrame(animate);
+      });
+    })();
+  </script>
+</body>
+</html>
