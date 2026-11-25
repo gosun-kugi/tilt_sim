@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>黄銅（C2600）縦型スラブ連続鋳造シミュレーター：数理モデルと物理理論解説</title>
 <style>
   :root {
@@ -36,22 +36,23 @@
     color: var(--text-main);
     font-family: var(--font-sans);
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    user-select: none;
   }
 
   /* Top Navigation Bar */
   header.topbar {
-    height: 48px;
-    background: rgba(15, 23, 42, 0.95);
+    min-height: 48px;
+    background: rgba(15, 23, 42, 0.96);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 6px 16px;
+    gap: 10px;
     flex-shrink: 0;
     z-index: 20;
   }
@@ -59,42 +60,52 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 14px;
+    gap: 8px;
+    font-size: 13.5px;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
+    min-width: 0;
+  }
+
+  .brand-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .brand-badge {
     background: linear-gradient(135deg, #0284c7, #0369a1);
     color: #fff;
-    font-size: 11px;
-    padding: 2px 8px;
+    font-size: 10.5px;
+    padding: 2px 7px;
     border-radius: 4px;
     font-weight: 700;
+    flex-shrink: 0;
   }
 
   .topbar-controls {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 7px;
+    flex-shrink: 0;
   }
 
   .slide-counter {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--cyan);
     background: var(--bg-card);
     border: 1px solid var(--border);
-    padding: 3px 10px;
+    padding: 3px 9px;
     border-radius: 4px;
+    white-space: nowrap;
   }
 
   .btn-ui {
     background: var(--bg-card);
     color: var(--text-main);
     border: 1px solid var(--border);
-    padding: 5px 11px;
+    padding: 5px 10px;
     border-radius: 5px;
     font-family: var(--font-sans);
     font-size: 12px;
@@ -102,7 +113,10 @@
     transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+    touch-action: manipulation;
   }
 
   .btn-ui:hover {
@@ -121,10 +135,11 @@
     flex: 1;
     position: relative;
     overflow: hidden;
-    padding: 16px 24px;
+    padding: 14px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 0;
   }
 
   .slide {
@@ -133,7 +148,7 @@
     height: 100%;
     max-width: 1440px;
     flex-direction: column;
-    animation: fadeIn 0.28s ease-out;
+    animation: fadeIn 0.25s ease-out;
   }
 
   .slide.active {
@@ -141,7 +156,7 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -150,21 +165,24 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 14px;
     border-bottom: 1px solid var(--border);
     padding-bottom: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     flex-shrink: 0;
   }
 
   .slide-title-group {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 10px;
   }
 
   .chapter-tag {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--cyan);
     background: rgba(56, 189, 248, 0.12);
@@ -174,30 +192,31 @@
   }
 
   .slide-header h1 {
-    font-size: 22px;
+    font-size: 21px;
     font-weight: 700;
     color: #f8fafc;
     letter-spacing: 0.01em;
+    line-height: 1.3;
   }
 
   .slide-subtitle {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-sub);
   }
 
-  /* 2-Column Content Grid */
+  /* 2-Column Content Grid (Desktop) */
   .slide-body {
     flex: 1;
     display: grid;
     grid-template-columns: 47% 53%;
-    gap: 18px;
+    gap: 16px;
     min-height: 0;
   }
 
   .col-theory {
     display: flex;
     flex-direction: column;
-    gap: 11px;
+    gap: 10px;
     overflow-y: auto;
     padding-right: 4px;
   }
@@ -214,14 +233,14 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 11px 13px;
   }
 
   .card-title {
     font-size: 13px;
     font-weight: 700;
     color: var(--cyan);
-    margin-bottom: 7px;
+    margin-bottom: 6px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -232,8 +251,8 @@
   .card-title.rose { color: var(--rose); }
 
   .card p, .card li {
-    font-size: 13.5px;
-    line-height: 1.62;
+    font-size: 13px;
+    line-height: 1.6;
     color: #e2e8f0;
   }
 
@@ -250,32 +269,34 @@
     border: 1px solid #1e3a5f;
     border-left: 3px solid var(--cyan);
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 9px 12px;
     margin: 4px 0;
     font-family: var(--font-math);
-    font-size: 17px;
+    font-size: 16px;
     color: #f8fafc;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
+    overflow-x: auto;
   }
 
   .math-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px 8px;
     line-height: 1.4;
   }
 
   .math-label {
     font-family: var(--font-sans);
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-sub);
-    background: rgba(30, 41, 59, 0.8);
-    padding: 1px 7px;
+    background: rgba(30, 41, 59, 0.85);
+    padding: 1px 6px;
     border-radius: 3px;
-    margin-right: 4px;
+    margin-right: 3px;
+    white-space: nowrap;
   }
 
   .frac {
@@ -284,7 +305,7 @@
     align-items: center;
     vertical-align: middle;
     margin: 0 3px;
-    font-size: 0.92em;
+    font-size: 0.9em;
   }
   .frac > span:first-child {
     border-bottom: 1px solid #cbd5e1;
@@ -307,7 +328,7 @@
     background: rgba(16, 185, 129, 0.08);
     border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: 8px;
-    padding: 11px 14px;
+    padding: 10px 13px;
   }
 
   .meaning-box .card-title {
@@ -317,12 +338,12 @@
   .var-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 12px;
-    margin-top: 6px;
-    padding-top: 6px;
+    gap: 5px 12px;
+    margin-top: 5px;
+    padding-top: 5px;
     border-top: 1px dashed var(--border);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-sub);
   }
 
@@ -340,20 +361,22 @@
   .anim-header {
     background: rgba(22, 32, 51, 0.95);
     border-bottom: 1px solid var(--border);
-    padding: 8px 14px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   .anim-title {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 700;
     color: #f8fafc;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    min-width: 0;
   }
 
   .live-dot {
@@ -362,6 +385,7 @@
     border-radius: 50%;
     background: var(--emerald);
     box-shadow: 0 0 8px var(--emerald);
+    flex-shrink: 0;
     animation: pulse 1.5s infinite;
   }
 
@@ -372,18 +396,20 @@
 
   .anim-badge {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--amber);
     background: rgba(245, 158, 11, 0.12);
     border: 1px solid rgba(245, 158, 11, 0.35);
-    padding: 2px 7px;
+    padding: 2px 6px;
     border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .canvas-wrap {
     flex: 1;
     position: relative;
-    min-height: 0;
+    min-height: 240px;
     background: #060b14;
   }
 
@@ -396,33 +422,34 @@
   .anim-controls {
     background: var(--bg-card);
     border-top: 1px solid var(--border);
-    padding: 9px 14px;
+    padding: 9px 12px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px 18px;
+    gap: 8px 16px;
     flex-shrink: 0;
   }
 
   .ctrl-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     font-size: 12px;
     color: #e2e8f0;
   }
 
   .ctrl-item input[type="range"] {
-    width: 115px;
+    width: 110px;
     accent-color: var(--cyan);
     cursor: pointer;
+    touch-action: pan-y;
   }
 
   .ctrl-val {
     font-family: var(--font-mono);
     font-size: 12px;
     color: var(--cyan);
-    min-width: 56px;
+    min-width: 54px;
     text-align: right;
   }
 
@@ -431,7 +458,7 @@
     flex: 1;
     display: grid;
     grid-template-columns: 48% 52%;
-    gap: 22px;
+    gap: 20px;
     align-items: stretch;
     min-height: 0;
   }
@@ -440,34 +467,34 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 16px;
-    padding: 10px 6px;
+    gap: 14px;
+    padding: 6px 4px;
   }
 
   .cover-kicker {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--amber);
     background: rgba(245, 158, 11, 0.12);
     border: 1px solid rgba(245, 158, 11, 0.35);
-    padding: 5px 12px;
+    padding: 4px 11px;
     border-radius: 20px;
     width: fit-content;
   }
 
   .cover-title {
-    font-size: 31px;
+    font-size: 28px;
     font-weight: 700;
     line-height: 1.32;
     color: #ffffff;
   }
 
   .cover-desc {
-    font-size: 14.5px;
-    line-height: 1.7;
+    font-size: 14px;
+    line-height: 1.65;
     color: var(--text-sub);
   }
 
@@ -475,7 +502,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   .toc-pill {
@@ -483,7 +510,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 10px;
-    font-size: 12.5px;
+    font-size: 12px;
     color: #e2e8f0;
     cursor: pointer;
     transition: all 0.15s;
@@ -496,7 +523,6 @@
   .toc-pill:hover {
     border-color: var(--cyan);
     background: var(--bg-card);
-    transform: translateX(2px);
   }
 
   .toc-pill span.num {
@@ -507,34 +533,38 @@
     background: rgba(56, 189, 248, 0.14);
     padding: 2px 6px;
     border-radius: 3px;
+    flex-shrink: 0;
   }
 
   /* Bottom Navigation Footer */
   footer.bottombar {
     height: 46px;
-    background: rgba(15, 23, 42, 0.95);
+    background: rgba(15, 23, 42, 0.96);
     border-top: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 16px;
+    gap: 10px;
     flex-shrink: 0;
+    z-index: 20;
   }
 
   .nav-buttons {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
   }
 
   .dots {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
   }
 
   .dot {
-    width: 24px;
+    width: 22px;
     height: 6px;
     border-radius: 3px;
     background: var(--border);
@@ -544,7 +574,7 @@
 
   .dot.active {
     background: var(--cyan);
-    width: 36px;
+    width: 34px;
   }
 
   .dot:hover {
@@ -561,11 +591,11 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(4, 8, 18, 0.92);
+    background: rgba(4, 8, 18, 0.95);
     z-index: 100;
-    padding: 36px;
+    padding: 24px 16px;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     overflow-y: auto;
   }
 
@@ -576,7 +606,7 @@
   .overview-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 14px;
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
@@ -586,7 +616,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px;
+    padding: 14px;
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -598,21 +628,178 @@
 
   .ov-card .ov-num {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--cyan);
     margin-bottom: 4px;
   }
 
   .ov-card .ov-title {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .ov-card .ov-desc {
-    font-size: 12.5px;
+    font-size: 12px;
     color: var(--text-sub);
     line-height: 1.5;
+  }
+
+  /* =========================================================
+     RESPONSIVE BREAKPOINTS (Tablet & Smartphone)
+     ========================================================= */
+  @media (max-width: 960px) {
+    main.stage {
+      overflow-y: auto;
+      overflow-x: hidden;
+      align-items: flex-start;
+      padding: 12px 14px 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .slide {
+      height: auto;
+      min-height: 100%;
+    }
+
+    .slide-body,
+    .cover-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .col-theory {
+      overflow-y: visible;
+      padding-right: 0;
+    }
+
+    .col-anim {
+      min-height: 390px;
+    }
+
+    .canvas-wrap {
+      height: 310px;
+      min-height: 310px;
+      flex: none;
+    }
+
+    .overview-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .shortcut-hint {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    header.topbar {
+      padding: 6px 10px;
+    }
+
+    .brand-title {
+      font-size: 12px;
+    }
+
+    .btn-label-hide {
+      display: none;
+    }
+
+    #btnFullscreen {
+      display: none;
+    }
+
+    .btn-ui {
+      padding: 5px 8px;
+      font-size: 11.5px;
+    }
+
+    .slide-header h1 {
+      font-size: 17px;
+    }
+
+    .slide-subtitle {
+      font-size: 11.5px;
+    }
+
+    .cover-title {
+      font-size: 21px;
+    }
+
+    .cover-desc {
+      font-size: 13px;
+    }
+
+    .toc-pills {
+      grid-template-columns: 1fr;
+    }
+
+    .math-box {
+      font-size: 14px;
+      padding: 8px 10px;
+    }
+
+    .card p, .card li {
+      font-size: 12.5px;
+    }
+
+    .col-anim {
+      min-height: 375px;
+    }
+
+    .canvas-wrap {
+      height: 300px;
+      min-height: 300px;
+    }
+
+    .anim-header {
+      padding: 7px 10px;
+    }
+
+    .anim-title {
+      font-size: 11.5px;
+    }
+
+    .anim-badge {
+      display: none;
+    }
+
+    .anim-controls {
+      padding: 8px 10px;
+      gap: 8px 10px;
+    }
+
+    .ctrl-item {
+      width: 100%;
+      justify-content: space-between;
+      font-size: 11.5px;
+    }
+
+    .ctrl-item input[type="range"] {
+      flex: 1;
+      max-width: 165px;
+    }
+
+    .overview-grid {
+      grid-template-columns: 1fr;
+    }
+
+    footer.bottombar {
+      padding: 0 10px;
+    }
+
+    .dots {
+      gap: 4px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 5px;
+    }
+
+    .dot.active {
+      width: 20px;
+    }
   }
 </style>
 </head>
@@ -620,18 +807,18 @@
 
 <header class="topbar">
   <div class="brand">
-    <span class="brand-badge">PHYSICS &amp; CFD</span>
-    <span>黄銅（C2600）縦型スラブ連続鋳造シミュレーター：数理モデルと物理理論解説</span>
+    <span class="brand-badge">PHYSICS</span>
+    <span class="brand-title">黄銅（C2600）連続鋳造シミュレーター理論解説</span>
   </div>
   <div class="topbar-controls">
-    <button class="btn-ui" id="btnPause" title="アニメーション一時停止/再開">⏸ 動画一時停止</button>
-    <button class="btn-ui" id="btnOverview" title="全スライド一覧 (G)">⊞ 目次一覧</button>
+    <button class="btn-ui" id="btnPause" title="アニメーション一時停止/再開">⏸ <span class="btn-label-hide">一時停止</span></button>
+    <button class="btn-ui" id="btnOverview" title="全スライド一覧 (G)">⊞ 目次</button>
     <button class="btn-ui" id="btnFullscreen" title="全画面表示">⛶ 全画面</button>
     <span class="slide-counter" id="slideCounter">01 / 09</span>
   </div>
 </header>
 
-<main class="stage">
+<main class="stage" id="stageContainer">
 
   <!-- SLIDE 1: COVER & SYSTEM COUPLING -->
   <section class="slide active" data-title="全体アーキテクチャと連成物理" data-desc="4つの物理モデル（流動・伝熱凝固・自由表面・粒子追跡）のリアルタイム連成構造">
@@ -640,8 +827,8 @@
         <div class="cover-kicker">Brass C2600 Vertical Slab Continuous Casting</div>
         <h1 class="cover-title">黄銅連続鋳造シミュレーター<br>数理モデルと物理理論の解説</h1>
         <p class="cover-desc">
-          本シミュレーターは、縦型スラブ連続鋳造モールド内の<strong>溶湯流動・乱流・熱輸送・凝固シェル成長・メニスカス波立ち・ガス気泡および介在物の巻き込み</strong>を、4つの物理ソルバーの連成によってリアルタイム計算しています。<br>
-          各スライド右側の<strong>インタラクティブHTML動画</strong>を操作して、数式の物理的意味を直感的に確認できます。
+          縦型スラブ連続鋳造モールド内の<strong>溶湯流動・乱流・熱輸送・凝固シェル成長・メニスカス波立ち・ガス気泡および介在物の巻き込み</strong>を、4つの物理ソルバーの連成によってリアルタイム計算しています。<br>
+          各スライドの<strong>インタラクティブHTML動画</strong>のスライダーを動かして、数式の物理的意味を確認できます。
         </p>
         <div class="toc-pills">
           <button class="toc-pill" onclick="goSlide(1)"><span class="num">02</span>連続の式と3D→2D流量スケーリング</button>
@@ -685,18 +872,18 @@
         <span class="chapter-tag">02 / MASS &amp; MOMENTUM SCALING</span>
         <h1>連続の式と3D→2D運動量スケーリング</h1>
       </div>
-      <span class="slide-subtitle">なぜ定常流量はタンディッシュ高さ H ではなく引抜き速度 Vc で決まるのか？</span>
+      <span class="slide-subtitle">定常流量はタンディッシュ高さ H ではなく引抜き速度 Vc で決まる</span>
     </div>
     <div class="slide-body">
       <div class="col-theory">
         <div class="card">
           <div class="card-title">1. 体積流量保存（連続の式）と実ポート流速</div>
-          <p>定常操業ではモールド湯面レベルを一定に保つため、ストッパー開度が自動調整され、流入体積流量 <b>Q</b> はスラブ断面積（幅 <b>W</b> × 厚み <b>T</b>）と引抜き速度 <b>V<sub>c</sub></b> の積に一致します。</p>
+          <p>定常操業ではモールド湯面レベルを一定に保つためストッパー開度が自動調整され、流入体積流量 <b>Q</b> はスラブ断面積（幅 <b>W</b> × 厚み <b>T</b>）と引抜き速度 <b>V<sub>c</sub></b> の積に一致します。</p>
           <div class="math-box">
             <div class="math-row">
               <span class="math-label">体積流量</span>
               <span><i class="var-c">Q</i> = <i class="var-c">W</i> · <i class="var-c">T</i> · <i class="var-c">V<sub>c</sub></i></span>
-              <span style="margin-left:14px;"><span class="math-label">実吐出流速</span><i class="var-a">v</i><sub>port</sub> = <span class="frac"><span><i class="var-c">Q</i></span><span>2 · (<i class="var-c">π</i>/4)<i class="var-c">d<sub>p</sub></i><sup>2</sup></span></span></span>
+              <span style="margin-left:10px;"><span class="math-label">実吐出流速</span><i class="var-a">v</i><sub>port</sub> = <span class="frac"><span><i class="var-c">Q</i></span><span>2 · (<i class="var-c">π</i>/4)<i class="var-c">d<sub>p</sub></i><sup>2</sup></span></span></span>
             </div>
             <div class="math-row">
               <span class="math-label">ストッパー開度比</span>
@@ -713,7 +900,7 @@
 
         <div class="card">
           <div class="card-title amber">2. 深さ平均（2.5D）奥行き減衰項</div>
-          <p>実機では丸孔（φ25 mm）から出た噴流が<strong>厚み方向（奥行き）にも広がりながら減衰</strong>します。単純な2D計算（無限スリット噴流）で湯面が過剰に波立つのを防ぐため、広面摩擦と3D広がり減衰を体積力として導入しています。</p>
+          <p>実機では丸孔（φ25 mm）から出た噴流が<strong>厚み方向（奥行き）にも広がりながら減衰</strong>します。単純な2D計算で湯面が過剰に波立つのを防ぐため、広面摩擦と3D広がり減衰を導入しています。</p>
           <div class="math-box" style="border-left-color: var(--amber);">
             <div class="math-row">
               <span class="math-label">3D減衰抵抗</span>
@@ -724,7 +911,7 @@
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>タンディッシュ高さ <b>H</b> を高くしても定常流速は暴走せず、代わりにストッパーが絞られる（<b>η<sub>stop</sub></b> 低下）ことで<strong>ノズル内乱流・吐出脈動</strong>が増えます。逆に <b>H</b> が低すぎるとタンディッシュ内で<strong>吸い込み渦</strong>が発生し、ガス・スラグの持ち込みが急増します。</p>
+          <p>タンディッシュ高さ <b>H</b> を高くしても定常流速は暴走せず、ストッパーが絞られる（<b>η<sub>stop</sub></b> 低下）ことで<strong>ノズル内乱流・脈動</strong>が増えます。逆に <b>H</b> が低すぎると<strong>吸い込み渦</strong>が発生し、ガス・スラグの持ち込みが急増します。</p>
         </div>
       </div>
 
@@ -770,7 +957,7 @@
       <div class="col-theory">
         <div class="card">
           <div class="card-title">1. 非圧縮性ナビエ・ストークス方程式（Boussinesq近似）</div>
-          <p>溶融黄銅（ρ ≈ 7,800 kg/m³）を非圧縮性ニュートン流体として扱い、慣性・圧力勾配・粘性・熱浮力・凝固抵抗の釣り合いを時間発展で解きます。</p>
+          <p>溶融黄銅（ρ ≈ 7,800 kg/m³）を非圧縮性ニュートン流体として扱い、慣性・圧力勾配・粘性・熱浮力・凝固抵抗の釣り合いを解きます。</p>
           <div class="math-box">
             <div class="math-row">
               <span class="math-label">質量保存</span>
@@ -789,7 +976,7 @@
           <div class="math-box" style="border-left-color: var(--emerald);">
             <div class="math-row">
               <span class="math-label">渦粘性係数</span>
-              <span><i class="var-e">ν<sub>t</sub></i> = (<i class="var-c">C<sub>s</sub></i> Δ)<sup>2</sup> |<i class="var-e">S</i>|, &nbsp;&nbsp; |<i class="var-e">S</i>| = √<span style="border-top:1px solid #cbd5e1; padding:0 3px;">2(<span class="frac"><span>∂<i class="var-c">u</i></span><span>∂<i class="var-c">x</i></span></span>)<sup>2</sup> + 2(<span class="frac"><span>∂<i class="var-c">v</i></span><span>∂<i class="var-c">y</i></span></span>)<sup>2</sup> + (<span class="frac"><span>∂<i class="var-c">u</i></span><span>∂<i class="var-c">y</i></span></span> + <span class="frac"><span>∂<i class="var-c">v</i></span><span>∂<i class="var-c">x</i></span></span>)<sup>2</sup></span></span>
+              <span><i class="var-e">ν<sub>t</sub></i> = (<i class="var-c">C<sub>s</sub></i> Δ)<sup>2</sup> |<i class="var-e">S</i>|, &nbsp; |<i class="var-e">S</i>| = √<span style="border-top:1px solid #cbd5e1; padding:0 3px;">2(<span class="frac"><span>∂<i class="var-c">u</i></span><span>∂<i class="var-c">x</i></span></span>)<sup>2</sup> + 2(<span class="frac"><span>∂<i class="var-c">v</i></span><span>∂<i class="var-c">y</i></span></span>)<sup>2</sup> + (<span class="frac"><span>∂<i class="var-c">u</i></span><span>∂<i class="var-c">y</i></span></span> + <span class="frac"><span>∂<i class="var-c">v</i></span><span>∂<i class="var-c">x</i></span></span>)<sup>2</sup></span></span>
             </div>
             <div class="math-row">
               <span class="math-label">圧力投影法</span>
@@ -806,7 +993,7 @@
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画③：ジェットせん断層での渦粘性 ν<sub>t</sub> と循環流形成</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画③：ジェットせん断層での渦粘性 ν<sub>t</sub> と循環流</div>
           <span class="anim-badge">SMAGORINSKY SGS</span>
         </div>
         <div class="canvas-wrap">
@@ -819,7 +1006,7 @@
             <span class="ctrl-val" id="v3_cs">0.16</span>
           </div>
           <div class="ctrl-item">
-            <button class="btn-ui active" id="btn3_mode">表示: 渦粘性 νt ヒートマップ＋流線</button>
+            <button class="btn-ui active" id="btn3_mode">表示: 渦粘性 νt＋流線</button>
           </div>
         </div>
       </div>
@@ -833,24 +1020,24 @@
         <span class="chapter-tag">04 / NUMERICAL ADVECTION</span>
         <h1>移流スキーム（MacCormack法・2次精度補間）の重要性</h1>
       </div>
-      <span class="slide-subtitle">なぜ計算スキームの精度が「湯面波立ち・巻き込み予測」の生死を分けるのか？</span>
+      <span class="slide-subtitle">計算スキームの精度が「湯面波立ち・巻き込み予測」の生死を分ける</span>
     </div>
     <div class="slide-body">
       <div class="col-theory">
         <div class="card">
           <div class="card-title rose">1. 1次精度風上差分の弱点（数値拡散の正体）</div>
-          <p>最も単純な1次風上差分では、テイラー展開の打ち切り誤差が<strong>人工的な粘性（数値拡散 ν<sub>num</sub>）</strong>として働き、高速なノズル噴流が壁面に届く前に不自然に鈍って消えてしまいます。</p>
+          <p>単純な1次風上差分では、打ち切り誤差が<strong>人工的な粘性（数値拡散 ν<sub>num</sub>）</strong>として働き、高速なノズル噴流が壁面に届く前に不自然に鈍って消えてしまいます。</p>
           <div class="math-box" style="border-left-color: var(--rose);">
             <div class="math-row">
               <span class="math-label">数値拡散係数</span>
-              <span><i class="var-r">ν</i><sub>num</sub> ≈ <span class="frac"><span>1</span><span>2</span></span> |<i class="var-c">u</i>| Δ<i class="var-c">x</i> (1 − CFL), &nbsp;&nbsp; CFL = <span class="frac"><span>|<i class="var-c">u</i>| Δ<i class="var-c">t</i></span><span>Δ<i class="var-c">x</i></span></span></span>
+              <span><i class="var-r">ν</i><sub>num</sub> ≈ <span class="frac"><span>1</span><span>2</span></span> |<i class="var-c">u</i>| Δ<i class="var-c">x</i> (1 − CFL), &nbsp; CFL = <span class="frac"><span>|<i class="var-c">u</i>| Δ<i class="var-c">t</i></span><span>Δ<i class="var-c">x</i></span></span></span>
             </div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-title">2. MacCormack法（予測子・修正子）＋単調性クランプ</div>
-          <p>前進差分と後退差分を交互に組み合わせる2次精度スキームにより数値拡散を相殺し、さらに局所最小・最大値でクランプすることで非物理的な数値振動（オーバーシュート）を完全に抑えています。</p>
+          <p>前進差分と後退差分を組み合わせる2次精度スキームで数値拡散を相殺し、さらに局所最小・最大値でクランプすることで非物理的な数値振動を完全に抑えています。</p>
           <div class="math-box">
             <div class="math-row">
               <span class="math-label">予測子 (前進)</span>
@@ -869,13 +1056,13 @@
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>数値拡散を抑えることで、ノズルから出た噴流の<strong>コア速度と指向性（吐出角度）</strong>が短辺壁面や湯面まで正確に伝達されます。これにより「吐出角度を +15° から +35° に上げたときの湯面上昇流の急増」を忠実に再現できます。</p>
+          <p>数値拡散を抑えることで、ノズルから出た噴流の<strong>コア速度と指向性（吐出角度）</strong>が短辺壁面や湯面まで正確に伝達され、吐出角度変更時の湯面上昇流の急増を忠実に再現できます。</p>
         </div>
       </div>
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画④：1次精度風上差分 vs 2次精度スキームの噴流到達比較</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画④：1次精度風上差分 vs 2次精度スキーム比較</div>
           <span class="anim-badge">NUMERICAL DIFFUSION TEST</span>
         </div>
         <div class="canvas-wrap">
@@ -912,7 +1099,7 @@
           <div class="math-box" style="border-left-color: var(--amber);">
             <div class="math-row">
               <span class="math-label">熱輸送式</span>
-              <span><i class="var-c">ρ c<sub>p</sub></i><sup>*</sup> (<span class="frac"><span>∂<i class="var-r">T</i></span><span>∂<i class="var-c">t</i></span></span> + <span class="vec var-c">u</span> · ∇<i class="var-r">T</i>) = ∇ · (<i class="var-c">k</i><sub>eff</sub> ∇<i class="var-r">T</i>), &nbsp;&nbsp; <i class="var-c">c<sub>p</sub></i><sup>*</sup> = <i class="var-c">c<sub>p</sub></i> + <i class="var-a">L<sub>f</sub></i> <span class="frac"><span>d<i class="var-e">f<sub>l</sub></i></span><span>d<i class="var-r">T</i></span></span></span>
+              <span><i class="var-c">ρ c<sub>p</sub></i><sup>*</sup> (<span class="frac"><span>∂<i class="var-r">T</i></span><span>∂<i class="var-c">t</i></span></span> + <span class="vec var-c">u</span> · ∇<i class="var-r">T</i>) = ∇ · (<i class="var-c">k</i><sub>eff</sub> ∇<i class="var-r">T</i>), &nbsp; <i class="var-c">c<sub>p</sub></i><sup>*</sup> = <i class="var-c">c<sub>p</sub></i> + <i class="var-a">L<sub>f</sub></i> <span class="frac"><span>d<i class="var-e">f<sub>l</sub></i></span><span>d<i class="var-r">T</i></span></span></span>
             </div>
             <div class="math-row">
               <span class="math-label">固相率 fs</span>
@@ -923,7 +1110,7 @@
 
         <div class="card">
           <div class="card-title rose">2. マッシーゾーン（樹枝状晶域）のDarcy減衰</div>
-          <p>固液共存域（0 &lt; f<sub>s</sub> &lt; 1）ではデンドライト樹間を溶湯が通過するため強い流動抵抗が生じ、完全凝固域（f<sub>s</sub> → 1）では引抜き速度 <b>V<sub>c</sub></b> に完全にロックされます。</p>
+          <p>固液共存域（0 &lt; f<sub>s</sub> &lt; 1）ではデンドライト樹間を溶湯が通過するため強い流動抵抗が生じ、完全凝固域（f<sub>s</sub> → 1）では引抜き速度 <b>V<sub>c</sub></b> にロックされます。</p>
           <div class="math-box" style="border-left-color: var(--rose);">
             <div class="math-row">
               <span class="math-label">Darcy抵抗</span>
@@ -934,13 +1121,13 @@
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>単なる √t 則の固定シェルではなく、流体場と温度場を双方向連成しているため、<strong>高温の吐出ジェットが壁面に直接衝突する箇所では対流熱伝達（u·∇T）が急増してシェルが局所的に再溶解（薄肉化）</strong>します。これは実機でのブレークアウト（湯漏れ）や捕捉深さ変化に直結します。</p>
+          <p>流体場と温度場を双方向連成しているため、<strong>高温の吐出ジェットが壁面に直接衝突する箇所では対流熱伝達（u·∇T）が急増してシェルが局所的に再溶解（薄肉化）</strong>します。これは湯漏れリスクや捕捉深さ変化に直結します。</p>
         </div>
       </div>
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画⑤：凝固シェル成長プロファイルとジェット衝突再溶解</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画⑤：凝固シェル成長とジェット衝突再溶解</div>
           <span class="anim-badge">MUSHY ZONE &amp; REMELTING</span>
         </div>
         <div class="canvas-wrap">
@@ -953,7 +1140,7 @@
             <span class="ctrl-val" id="v5_temp">1040 ℃</span>
           </div>
           <div class="ctrl-item">
-            <span>ジェット壁面衝突強度:</span>
+            <span>ジェット衝突強度:</span>
             <input type="range" id="s5_jet" min="0" max="100" step="5" value="25">
             <span class="ctrl-val" id="v5_jet">25 %</span>
           </div>
@@ -982,7 +1169,7 @@
               <span>Δ<i class="var-c">h</i>(<i class="var-c">x</i>) = <span class="frac"><span><i class="var-a">P</i><sub>top</sub>(<i class="var-c">x</i>) − <i class="var-a">P</i><sub>mean</sub></span><span><i class="var-c">ρ g</i></span></span> ≈ <span class="frac"><span><i class="var-c">u</i><sub>surf</sub><sup>2</sup></span><span>2<i class="var-c">g</i></span></span></span>
             </div>
           </div>
-          <p style="margin-top:4px; font-size:12.5px; color:var(--text-sub);">※ 湯面流速 0.06 m/s では Δh ≈ 0.2 mm（鏡面）、0.35 m/s では Δh ≈ 6.2 mm の明確な盛り上がりとなります。</p>
+          <p style="margin-top:4px; font-size:12px; color:var(--text-sub);">※ 湯面流速 0.06 m/s では Δh ≈ 0.2 mm（鏡面）、0.35 m/s では Δh ≈ 6.2 mm の盛り上がりになります。</p>
         </div>
 
         <div class="card">
@@ -1002,13 +1189,13 @@
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>適度な湯面流速（0.05〜0.15 m/s）はメニスカス凝固を防ぐ保温効果を持ちますが、<strong>臨界速度 0.28 m/s を超えた瞬間に巻き込み量が二乗則で急増</strong>します。シミュレーターではこの閾値判定により、安定操業と異常巻き込みの境界を明瞭に分離しています。</p>
+          <p>適度な湯面流速（0.05〜0.15 m/s）はメニスカス凝固を防ぐ保温効果を持ちますが、<strong>臨界速度 0.28 m/s を超えた瞬間に巻き込み量が二乗則で急増</strong>します。</p>
         </div>
       </div>
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画⑥：吐出角度による流動遷移とKHせん断巻き込み発生</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画⑥：吐出角度による流動遷移とKHせん断巻き込み</div>
           <span class="anim-badge">DOUBLE → SINGLE ROLL</span>
         </div>
         <div class="canvas-wrap">
@@ -1021,7 +1208,7 @@
             <span class="ctrl-val" id="v6_ang">-15°</span>
           </div>
           <div class="ctrl-item">
-            <span>ノズル浸漬深さ D:</span>
+            <span>浸漬深さ D:</span>
             <input type="range" id="s6_dep" min="50" max="180" step="5" value="110">
             <span class="ctrl-val" id="v6_dep">110 mm</span>
           </div>
@@ -1051,31 +1238,31 @@
             </div>
             <div class="math-row">
               <span class="math-label">Schiller-Naumann</span>
-              <span><i class="var-e">C<sub>D</sub></i> = <span class="frac"><span>24</span><span><i class="var-e">Re<sub>p</sub></i></span></span> (1 + 0.15 <i class="var-e">Re<sub>p</sub></i><sup>0.687</sup>), &nbsp;&nbsp; <i class="var-e">Re<sub>p</sub></i> = <span class="frac"><span><i class="var-c">ρ<sub>f</sub> d<sub>p</sub></i> |<span class="vec var-c">u</span><sub>rel</sub>|</span><span><i class="var-c">μ</i></span></span></span>
+              <span><i class="var-e">C<sub>D</sub></i> = <span class="frac"><span>24</span><span><i class="var-e">Re<sub>p</sub></i></span></span> (1 + 0.15 <i class="var-e">Re<sub>p</sub></i><sup>0.687</sup>), &nbsp; <i class="var-e">Re<sub>p</sub></i> = <span class="frac"><span><i class="var-c">ρ<sub>f</sub> d<sub>p</sub></i> |<span class="vec var-c">u</span><sub>rel</sub>|</span><span><i class="var-c">μ</i></span></span></span>
             </div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-title amber">2. Eötvös数による大気泡扁平化と終端速度制限</div>
-          <p>気泡径 <b>d<sub>p</sub></b> が 1 mm を超えると表面張力に対して浮力が勝り（Eötvös数 <b>Eo &gt; 1</b>）、球形から楕円・おわん型に扁平化して抗力が増すため、終端上昇速度は <b>0.25〜0.30 m/s</b> 付近で頭打ちになります。</p>
+          <p>気泡径 <b>d<sub>p</sub></b> が 1 mm を超えると表面張力に対して浮力が勝り（Eötvös数 <b>Eo &gt; 1</b>）、扁平化して抗力が増すため、終端上昇速度は <b>0.25〜0.30 m/s</b> 付近で頭打ちになります。</p>
           <div class="math-box" style="border-left-color: var(--amber);">
             <div class="math-row">
               <span class="math-label">Eötvös数</span>
-              <span><i class="var-a">Eo</i> = <span class="frac"><span><i class="var-c">g</i>(<i class="var-c">ρ<sub>f</sub></i> − <i class="var-c">ρ<sub>p</sub></i>)<i class="var-c">d<sub>p</sub></i><sup>2</sup></span><span><i class="var-c">σ</i></span></span>, &nbsp;&nbsp; <i class="var-a">U</i><sub>term</sub> = min(<i class="var-a">U</i><sub>SN</sub>, <i class="var-a">U</i><sub>cap</sub>)</span>
+              <span><i class="var-a">Eo</i> = <span class="frac"><span><i class="var-c">g</i>(<i class="var-c">ρ<sub>f</sub></i> − <i class="var-c">ρ<sub>p</sub></i>)<i class="var-c">d<sub>p</sub></i><sup>2</sup></span><span><i class="var-c">σ</i></span></span>, &nbsp; <i class="var-a">U</i><sub>term</sub> = min(<i class="var-a">U</i><sub>SN</sub>, <i class="var-a">U</i><sub>cap</sub>)</span>
             </div>
           </div>
         </div>
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>浮力は粒径の3乗（<b>d<sub>p</sub><sup>3</sup></b>）に比例するため、<strong>100 μm 以下の微細気泡・介在物は上昇速度が数 mm/s しかなく下降流に負けて深部へ運ばれます</strong>。逆に 500 μm 以上の粗大気泡は強い浮力でノズル近傍から一気に湯面へ浮上します。</p>
+          <p>浮力は粒径の3乗（<b>d<sub>p</sub><sup>3</sup></b>）に比例するため、<strong>100 μm 以下の微細気泡・介在物は上昇速度が数 mm/s しかなく下降流に負けて深部へ運ばれます</strong>。逆に 500 μm 以上の粗大気泡は強い浮力で湯面へ浮上します。</p>
         </div>
       </div>
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画⑦：粒径別の軌跡分岐（浮上排出 vs 下降流持ち込み）</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画⑦：粒径別の軌跡分岐（浮上 vs 深部持ち込み）</div>
           <span class="anim-badge">SIZE-DEPENDENT TRAJECTORY</span>
         </div>
         <div class="canvas-wrap">
@@ -1123,22 +1310,22 @@
 
         <div class="card">
           <div class="card-title rose">2. 捕捉後のスラブ随伴下降と欠陥深さ分布</div>
-          <p>捕捉された粒子は以降 <b>u<sub>p</sub> = (0, V<sub>c</sub>)</b> で凝固シェルとともに下降し、捕捉された時点のシェル厚 <b>δ<sub>shell</sub></b> がそのまま<strong>圧延前の鋳片表層からの欠陥深さ</strong>として記録されます。</p>
+          <p>捕捉された粒子は以降 <b>u<sub>p</sub> = (0, V<sub>c</sub>)</b> で凝固シェルとともに下降し、捕捉された時点のシェル厚 <b>δ<sub>shell</sub></b> がそのまま<strong>鋳片表層からの欠陥深さ</strong>として記録されます。</p>
           <ul>
-            <li><b>メニスカス直下の捕捉（深さ 0〜5 mm）</b>：面削（スカルピング）で除去可能だが、過多だと表面割れの原因に。</li>
-            <li><b>モールド中〜下部の捕捉（深さ 8〜25 mm）</b>：面削代より深く残り、圧延後の内部欠陥（ふくれ・ピンホール）となる。</li>
+            <li><b>メニスカス直下の捕捉（深さ 0〜5 mm）</b>：面削で除去可能だが、過多だと表面割れの原因に。</li>
+            <li><b>モールド中〜下部の捕捉（深さ 8〜25 mm）</b>：面削代より深く残り、圧延後の内部欠陥となる。</li>
           </ul>
         </div>
 
         <div class="meaning-box">
           <div class="card-title">💡 この数式が持つ物理的意味</div>
-          <p>適度な溶湯流動（<b>u<sub>tan</sub></b>）は凝固界面に近づいた気泡や介在物を<strong>洗い流す（Wash-out）</strong>有益な働きをします。逆に淀み域や急冷域では <b>V<sub>sol</sub> &gt; V<sub>cr</sub></b> となりやすく、デンドライトの樹間に粒子が飲み込まれます。</p>
+          <p>適度な溶湯流動（<b>u<sub>tan</sub></b>）は凝固界面に近づいた気泡や介在物を<strong>洗い流す（Wash-out）</strong>有益な働きをします。逆に淀み域や急冷域では <b>V<sub>sol</sub> &gt; V<sub>cr</sub></b> となりやすく、デンドライトの樹間に飲み込まれます。</p>
         </div>
       </div>
 
       <div class="col-anim">
         <div class="anim-header">
-          <div class="anim-title"><span class="live-dot"></span>HTML動画⑧：デンドライト凝固界面のミクロ挙動（捕捉 vs 洗い流し）</div>
+          <div class="anim-title"><span class="live-dot"></span>HTML動画⑧：デンドライト凝固界面（捕捉 vs 洗い流し）</div>
           <span class="anim-badge">ENGULFMENT VS WASH-OUT</span>
         </div>
         <div class="canvas-wrap">
@@ -1151,7 +1338,7 @@
             <span class="ctrl-val" id="v8_utan">0.14 m/s</span>
           </div>
           <div class="ctrl-item">
-            <span>凝固成長速度 V_sol:</span>
+            <span>凝固速度 V_sol:</span>
             <input type="range" id="s8_vsol" min="0.2" max="2.5" step="0.1" value="0.9">
             <span class="ctrl-val" id="v8_vsol">0.9 mm/s</span>
           </div>
@@ -1177,7 +1364,7 @@
             <li><b class="var-c">ノズル吐出角度（−45° 〜 +60°）</b><br>
               上向き過ぎると湯面流速が KH臨界速度（0.28 m/s）を超え<b>メニスカス巻き込み</b>が急増。下向き過ぎると下降流が深くなり微細気泡の<b>深部持ち込み</b>が増える。</li>
             <li><b class="var-a">ノズル浸漬深さ D（50 〜 200 mm）</b><br>
-              浅すぎると湯面が波立ちやすく、深すぎると湯面が停滞してメニスカス凝固（皮張り）や介在物浮上距離の増大を招く。</li>
+              浅すぎると湯面が波立ちやすく、深すぎると湯面が停滞してメニスカス凝固や介在物浮上距離の増大を招く。</li>
             <li><b class="var-e">引抜き速度 V<sub>c</sub> &amp; 鋳造温度 T<sub>cast</sub></b><br>
               高速化は吐出運動量（∝ V<sub>c</sub><sup>2</sup>）を急増させると同時にシェル成長時間を短縮するため、再溶解リスクが高まる。</li>
           </ul>
@@ -1185,7 +1372,7 @@
 
         <div class="meaning-box">
           <div class="card-title">💡 シミュレーター活用のポイント</div>
-          <p>右側のマップ上で<strong>操業点（吐出角度 × 浸漬深さ）</strong>を動かすと、3つの物理モデル（KH不安定・ストークス浮上競合・対流熱伝達）から導かれるリスクバランスがリアルタイムに変化します。自社のスラブ寸法（W × T）に合わせて適正ウィンドウを探索できます。</p>
+          <p>マップ上で<strong>操業点（吐出角度 × 浸漬深さ）</strong>を動かすと、3つの物理モデルから導かれるリスクバランスがリアルタイムに変化します。スラブ寸法に合わせて適正ウィンドウを探索できます。</p>
         </div>
       </div>
 
@@ -1226,20 +1413,37 @@
     <button class="btn-ui" id="btnNext">次へ ▶</button>
   </div>
   <div class="dots" id="dotsContainer"></div>
-  <div class="shortcut-hint">操作: [←] [→] [Space] でスライド切替 ／ [G] で目次一覧 ／ 右側動画はスライダーでリアルタイム操作可能</div>
+  <div class="shortcut-hint">操作: [←] [→] [Space] でスライド切替 ／ [G] で目次一覧 ／ スライダーでリアルタイム操作可能</div>
 </footer>
 
 <!-- Overview Modal -->
 <div class="modal-overview" id="overviewModal">
   <div style="display:flex; justify-content:space-between; align-items:center; max-width:1200px; width:100%; margin:0 auto;">
-    <h2 style="font-size:20px;">スライド目次一覧（クリックで移動）</h2>
-    <button class="btn-ui" id="btnCloseOverview">✕ 閉じる (Esc)</button>
+    <h2 style="font-size:18px;">スライド目次一覧（タップで移動）</h2>
+    <button class="btn-ui" id="btnCloseOverview">✕ 閉じる</button>
   </div>
   <div class="overview-grid" id="overviewGrid"></div>
 </div>
 
 <script>
 (() => {
+  // Polyfill roundRect for older mobile browsers / WebViews
+  if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+      this.moveTo(x + r.tl, y);
+      this.lineTo(x + w - r.tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+      this.lineTo(x + w, y + h - r.br);
+      this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+      this.lineTo(x + r.bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+      this.lineTo(x, y + r.tl);
+      this.quadraticCurveTo(x, y, x + r.tl, y);
+      return this;
+    };
+  }
+
   const slides = Array.from(document.querySelectorAll('.slide'));
   const totalSlides = slides.length;
   let currentSlide = 0;
@@ -1249,6 +1453,7 @@
   const dotsContainer = document.getElementById('dotsContainer');
   const overviewModal = document.getElementById('overviewModal');
   const overviewGrid = document.getElementById('overviewGrid');
+  const stageContainer = document.getElementById('stageContainer');
 
   // Build dots & overview cards
   slides.forEach((sl, idx) => {
@@ -1284,6 +1489,7 @@
     dotsContainer.children[currentSlide].classList.add('active');
     overviewGrid.children[currentSlide].classList.add('current');
     slideCounter.textContent = `${String(currentSlide + 1).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`;
+    stageContainer.scrollTop = 0;
   };
 
   document.getElementById('btnPrev').onclick = () => goSlide(currentSlide - 1);
@@ -1293,7 +1499,7 @@
 
   document.getElementById('btnPause').onclick = function() {
     paused = !paused;
-    this.textContent = paused ? '▶ 動画再開' : '⏸ 動画一時停止';
+    this.innerHTML = paused ? '▶ <span class="btn-label-hide">再開</span>' : '⏸ <span class="btn-label-hide">一時停止</span>';
     this.classList.toggle('active', paused);
   };
 
@@ -1324,6 +1530,30 @@
     }
   });
 
+  // Mobile Touch Swipe Support (ignores range sliders and horizontal scroll math boxes)
+  let touchStartX = 0, touchStartY = 0, touchIgnore = false;
+  stageContainer.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target;
+    if (target.tagName === 'INPUT' || target.closest('.math-box') || target.closest('.anim-controls')) {
+      touchIgnore = true;
+      return;
+    }
+    touchIgnore = false;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  stageContainer.addEventListener('touchend', (e) => {
+    if (touchIgnore || e.changedTouches.length !== 1) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) goSlide(currentSlide + 1);
+      else goSlide(currentSlide - 1);
+    }
+  }, { passive: true });
+
   // Helper: HiDPI Canvas Setup
   function setupCanvas(id) {
     const cv = document.getElementById(id);
@@ -1334,7 +1564,7 @@
       resize() {
         const rect = cv.parentElement.getBoundingClientRect();
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = Math.max(300, Math.floor(rect.width));
+        const w = Math.max(260, Math.floor(rect.width));
         const h = Math.max(220, Math.floor(rect.height));
         if (cv.width !== w * dpr || cv.height !== h * dpr) {
           cv.width = w * dpr;
@@ -1387,7 +1617,7 @@
     const c = setupCanvas('cv1');
     const getAng = bindSlider('s1_angle', 'v1_angle', v => `${v > 0 ? '+' : ''}${v}°`);
     const getVc = bindSlider('s1_vc', 'v1_vc', v => `${v} mm/m`);
-    const tracers = Array.from({ length: 55 }, (_, i) => ({
+    const tracers = Array.from({ length: 50 }, (_, i) => ({
       side: i % 2 === 0 ? 1 : -1,
       s: Math.random(),
       type: i % 7 === 0 ? 'gas' : (i % 5 === 0 ? 'inc' : 'fluid')
@@ -1398,85 +1628,81 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
+      const compact = w < 490;
       const angDeg = getAng();
       const angRad = (angDeg * Math.PI) / 180;
       const vc = getVc();
       const speedScale = vc / 150;
 
-      // Left side: Mold visualization
-      const mx = 36, my = 38, mw = Math.min(250, w * 0.42), mh = h - 64;
+      const mx = compact ? 16 : 32;
+      const my = compact ? 18 : 34;
+      const mw = compact ? Math.min(200, w * 0.45) : Math.min(245, w * 0.42);
+      const mh = compact ? h - 38 : h - 60;
       const cx = mx + mw / 2;
 
-      // Liquid copper-amber gradient
       const grad = ctx.createLinearGradient(0, my, 0, my + mh);
       grad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
       grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.14)');
       grad.addColorStop(1, 'rgba(14, 116, 144, 0.20)');
       ctx.fillStyle = grad;
-      ctx.fillRect(mx, my + 18, mw, mh - 18);
+      ctx.fillRect(mx, my + 16, mw, mh - 16);
 
-      // Solidifying shell on left & right walls
-      const shellBottom = Math.max(16, (mw * 0.22) / Math.sqrt(speedScale));
+      const shellBottom = Math.max(12, (mw * 0.21) / Math.sqrt(speedScale));
       ctx.fillStyle = 'rgba(148, 163, 184, 0.34)';
       ctx.beginPath();
-      ctx.moveTo(mx, my + 18);
-      ctx.lineTo(mx + 2, my + 18);
+      ctx.moveTo(mx, my + 16);
+      ctx.lineTo(mx + 2, my + 16);
       ctx.quadraticCurveTo(mx + shellBottom * 0.65, my + mh * 0.55, mx + shellBottom, my + mh);
       ctx.lineTo(mx, my + mh);
       ctx.closePath();
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(mx + mw, my + 18);
-      ctx.lineTo(mx + mw - 2, my + 18);
+      ctx.moveTo(mx + mw, my + 16);
+      ctx.lineTo(mx + mw - 2, my + 16);
       ctx.quadraticCurveTo(mx + mw - shellBottom * 0.65, my + mh * 0.55, mx + mw - shellBottom, my + mh);
       ctx.lineTo(mx + mw, my + mh);
       ctx.closePath();
       ctx.fill();
 
-      // Mold walls
       ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(mx, my + 10, mw, mh - 10);
-
-      // Meniscus wave
-      const waveAmp = Math.max(1.2, (angDeg > 0 ? 1.5 + angDeg * 0.16 : 1.2) * speedScale);
-      ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 2.5;
+      ctx.strokeRect(mx, my + 8, mw, mh - 8);
+
+      const waveAmp = Math.max(1.2, (angDeg > 0 ? 1.4 + angDeg * 0.14 : 1.1) * speedScale);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
       ctx.beginPath();
       for (let x = 0; x <= mw; x += 3) {
         const nx = (x - mw / 2) / (mw / 2);
-        const wy = my + 18 - Math.sin(Math.abs(nx) * Math.PI) * waveAmp * (0.75 + 0.25 * Math.sin(t * 5 + x * 0.12));
+        const wy = my + 16 - Math.sin(Math.abs(nx) * Math.PI) * waveAmp * (0.75 + 0.25 * Math.sin(t * 5 + x * 0.12));
         if (x === 0) ctx.moveTo(mx + x, wy);
         else ctx.lineTo(mx + x, wy);
       }
       ctx.stroke();
 
-      // SEN Nozzle
-      const nozW = 24, nozH = 68;
+      const nozW = compact ? 18 : 24, nozH = compact ? 52 : 66;
       ctx.fillStyle = '#334155';
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 1.5;
-      ctx.fillRect(cx - nozW / 2, my - 6, nozW, nozH);
-      ctx.strokeRect(cx - nozW / 2, my - 6, nozW, nozH);
+      ctx.fillRect(cx - nozW / 2, my - 4, nozW, nozH);
+      ctx.strokeRect(cx - nozW / 2, my - 4, nozW, nozH);
 
-      // Jet arrows
-      const portY = my + nozH - 12;
-      const jetLen = 46 * Math.sqrt(speedScale);
+      const portY = my + nozH - 10;
+      const jetLen = (compact ? 32 : 44) * Math.sqrt(speedScale);
       [-1, 1].forEach(side => {
         const jx = cx + side * (nozW / 2);
         const ex = jx + side * Math.cos(angRad) * jetLen;
         const ey = portY - Math.sin(angRad) * jetLen;
-        drawArrow(ctx, jx, portY, ex, ey, '#38bdf8', 2.5, 7);
+        drawArrow(ctx, jx, portY, ex, ey, '#38bdf8', 2.2, 6);
       });
 
-      // Tracers (fluid, gas, inclusions)
       tracers.forEach(p => {
         if (!paused) p.s = (p.s + 0.006 * speedScale) % 1;
         const s = p.s;
         const jx = cx + p.side * (nozW / 2);
         const hitX = mx + (p.side === 1 ? mw - shellBottom * 0.5 : shellBottom * 0.5);
-        const hitY = Math.max(my + 26, Math.min(my + mh - 30, portY - Math.sin(angRad) * (mw * 0.42)));
+        const hitY = Math.max(my + 22, Math.min(my + mh - 24, portY - Math.sin(angRad) * (mw * 0.42)));
         let px, py;
         if (s < 0.35) {
           const u = s / 0.35;
@@ -1487,82 +1713,69 @@
           const goUp = p.type === 'gas' || angDeg > 12 || (p.type === 'fluid' && u < 0.5 && angDeg > -5);
           if (goUp) {
             px = hitX - p.side * (mw * 0.35) * Math.sin(u * Math.PI);
-            py = hitY - (hitY - (my + 22)) * u;
+            py = hitY - (hitY - (my + 20)) * u;
           } else {
             px = hitX - p.side * (mw * 0.28) * Math.sin(u * Math.PI);
-            py = hitY + (my + mh - 14 - hitY) * u;
+            py = hitY + (my + mh - 12 - hitY) * u;
           }
         }
         ctx.beginPath();
         if (p.type === 'gas') {
           ctx.fillStyle = '#38bdf8';
-          ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+          ctx.arc(px, py, 2.8, 0, Math.PI * 2);
         } else if (p.type === 'inc') {
           ctx.fillStyle = '#fbbf24';
-          ctx.arc(px, py, 2.8, 0, Math.PI * 2);
+          ctx.arc(px, py, 2.5, 0, Math.PI * 2);
         } else {
-          ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
-          ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.42)';
+          ctx.arc(px, py, 1.6, 0, Math.PI * 2);
         }
         ctx.fill();
       });
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText('モールド2D断面 (リアルタイム連成)', mx, h - 10);
+      ctx.font = `${compact ? 10 : 11}px ${FONT}`;
+      ctx.fillText('モールド2D連成断面', mx, h - 7);
 
-      // Right side: 4 Coupled Solver Nodes
-      const rx = mx + mw + 28;
-      const rw = w - rx - 20;
+      const rx = mx + mw + (compact ? 14 : 26);
+      const rw = w - rx - (compact ? 12 : 18);
+      const startY = compact ? 18 : 36;
+      const spanH = h - startY - 16;
       const nodes = [
-        { title: '① 2D CFD 流体ソルバー', sub: '連続の式 + Smagorinsky乱流', col: '#38bdf8', y: 42 },
-        { title: '② 潜熱・凝固シェルソルバー', sub: '見かけ比熱法 + Darcy抵抗', col: '#f59e0b', y: 42 + (h - 76) * 0.26 },
-        { title: '③ メニスカス自由表面モデル', sub: '動圧ヘッド + KH臨界巻き込み', col: '#fb7185', y: 42 + (h - 76) * 0.52 },
-        { title: '④ ラグランジュ粒子追跡', sub: 'Schiller-Naumann抗力 + 捕捉判定', col: '#10b981', y: 42 + (h - 76) * 0.78 }
+        { title: compact ? '① CFD 流体' : '① 2D CFD 流体ソルバー', sub: compact ? 'N-S + SGS乱流' : '連続の式 + Smagorinsky乱流', col: '#38bdf8', y: startY },
+        { title: compact ? '② 潜熱・凝固シェル' : '② 潜熱・凝固シェルソルバー', sub: compact ? '見かけ比熱 + Darcy' : '見かけ比熱法 + Darcy抵抗', col: '#f59e0b', y: startY + spanH * 0.26 },
+        { title: compact ? '③ メニスカス湯面' : '③ メニスカス自由表面モデル', sub: compact ? '動圧 + KH巻き込み' : '動圧ヘッド + KH臨界巻き込み', col: '#fb7185', y: startY + spanH * 0.52 },
+        { title: compact ? '④ 粒子追跡・捕捉' : '④ ラグランジュ粒子追跡', sub: compact ? '抗力 + 捕捉判定' : 'Schiller-Naumann抗力 + 捕捉判定', col: '#10b981', y: startY + spanH * 0.78 }
       ];
-      const boxH = Math.min(54, (h - 90) * 0.21);
+      const boxH = Math.min(52, spanH * 0.21);
 
       nodes.forEach((nd, i) => {
         ctx.fillStyle = '#111827';
         ctx.strokeStyle = nd.col;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.roundRect(rx, nd.y, rw, boxH, 7);
+        ctx.roundRect(rx, nd.y, rw, boxH, 6);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = nd.col;
-        ctx.font = `bold 12.5px ${FONT}`;
-        ctx.fillText(nd.title, rx + 12, nd.y + 21);
+        ctx.font = `bold ${compact ? 10.5 : 12.5}px ${FONT}`;
+        ctx.fillText(nd.title, rx + (compact ? 8 : 12), nd.y + (compact ? 17 : 20));
 
         ctx.fillStyle = '#cbd5e1';
-        ctx.font = `11.5px ${FONT}`;
-        ctx.fillText(nd.sub, rx + 12, nd.y + 39);
+        ctx.font = `${compact ? 9.5 : 11.5}px ${FONT}`;
+        ctx.fillText(nd.sub, rx + (compact ? 8 : 12), nd.y + (compact ? 33 : 38));
 
         if (i < nodes.length - 1) {
           const nyNext = nodes[i + 1].y;
-          drawArrow(ctx, rx + rw * 0.35, nd.y + boxH + 2, rx + rw * 0.35, nyNext - 2, '#64748b', 1.6, 5);
-          // Pulse dot along coupling link
-          const pulseY = nd.y + boxH + ((t * 45 + i * 20) % Math.max(8, nyNext - nd.y - boxH));
+          drawArrow(ctx, rx + rw * 0.4, nd.y + boxH + 1, rx + rw * 0.4, nyNext - 1, '#64748b', 1.4, 4);
+          const pulseY = nd.y + boxH + ((t * 40 + i * 18) % Math.max(6, nyNext - nd.y - boxH));
           ctx.fillStyle = nd.col;
           ctx.beginPath();
-          ctx.arc(rx + rw * 0.35, pulseY, 3, 0, Math.PI * 2);
+          ctx.arc(rx + rw * 0.4, pulseY, 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
       });
-
-      // Feedback loop line from Shell -> CFD
-      ctx.save();
-      ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
-      ctx.setLineDash([4, 3]);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(rx + rw, nodes[1].y + boxH / 2);
-      ctx.lineTo(rx + rw + 10, nodes[1].y + boxH / 2);
-      ctx.lineTo(rx + rw + 10, nodes[0].y + boxH / 2);
-      ctx.lineTo(rx + rw, nodes[0].y + boxH / 2);
-      ctx.stroke();
-      ctx.restore();
     };
   })();
 
@@ -1580,124 +1793,114 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
-      const W = getW(); // mm
-      const T = 180; // mm
-      const Vc = getVc(); // mm/min
-      const H = getH(); // mm
+      const compact = w < 490;
+      const W = getW();
+      const T = 180;
+      const Vc = getVc();
+      const H = getH();
 
-      // Physics calculation
-      const Q_Lmin = (W * T * Vc) / 1e6; // L/min
+      const Q_Lmin = (W * T * Vc) / 1e6;
       const Q_m3s = Q_Lmin / 60000;
-      const dp = 0.025; // 25mm
+      const dp = 0.025;
       const A_ports = 2 * (Math.PI / 4) * dp * dp;
-      const v_port = Q_m3s / A_ports; // m/s
+      const v_port = Q_m3s / A_ports;
       const v_torr = 0.85 * Math.sqrt(2 * 9.81 * (H / 1000));
       const eta = Math.min(1.0, v_port / Math.max(0.05, v_torr));
 
-      // Top Left: Tundish + Stopper Rod
-      const tx = 30, ty = 28, tw = 170, th = 115;
+      const tx = compact ? 14 : 28;
+      const ty = compact ? 18 : 26;
+      const tw = compact ? Math.min(126, w * 0.36) : 165;
+      const th = compact ? 86 : 110;
       ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       ctx.strokeRect(tx, ty, tw, th);
 
-      // Liquid level inside tundish according to H
       const fillRatio = 0.25 + 0.65 * ((H - 150) / 600);
       const liqTop = ty + th * (1 - fillRatio);
       ctx.fillStyle = 'rgba(245, 158, 11, 0.28)';
       ctx.fillRect(tx + 2, liqTop, tw - 4, ty + th - liqTop - 2);
 
-      // Tundish vortex warning when H < 260
       if (H < 260) {
-        const vx = tx + tw / 2 + 24;
+        const vx = tx + tw / 2 + 18;
         ctx.strokeStyle = '#fb7185';
-        ctx.lineWidth = 1.8;
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.moveTo(vx - 14, liqTop);
-        ctx.quadraticCurveTo(vx, liqTop + 26, vx, ty + th - 6);
-        ctx.quadraticCurveTo(vx, liqTop + 26, vx + 14, liqTop);
+        ctx.moveTo(vx - 10, liqTop);
+        ctx.quadraticCurveTo(vx, liqTop + 20, vx, ty + th - 4);
+        ctx.quadraticCurveTo(vx, liqTop + 20, vx + 10, liqTop);
         ctx.stroke();
         ctx.fillStyle = '#fb7185';
-        ctx.font = `bold 11px ${FONT}`;
-        ctx.fillText('⚠ 低ヘッド吸い込み渦', tx + 10, ty + 18);
+        ctx.font = `bold ${compact ? 9.5 : 11}px ${FONT}`;
+        ctx.fillText('⚠ 吸い込み渦', tx + 6, ty + 14);
       }
 
-      // Stopper rod lift proportional to eta
-      const lift = 4 + eta * 22;
+      const lift = 3 + eta * (compact ? 16 : 22);
       const sx = tx + tw / 2;
       ctx.fillStyle = '#475569';
       ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.roundRect(sx - 9, ty - 14 - lift, 18, th + 14, 6);
+      ctx.roundRect(sx - 7, ty - 10 - lift, 14, th + 10, 5);
       ctx.fill();
       ctx.stroke();
 
-      // SEN below tundish
+      const senH = compact ? 38 : 50;
       ctx.fillStyle = '#334155';
-      ctx.fillRect(sx - 11, ty + th, 22, 54);
-      ctx.strokeRect(sx - 11, ty + th, 22, 54);
+      ctx.fillRect(sx - 9, ty + th, 18, senH);
+      ctx.strokeRect(sx - 9, ty + th, 18, senH);
 
-      // Port jet vectors
-      const jLen = Math.min(75, v_port * 135);
-      drawArrow(ctx, sx + 11, ty + th + 42, sx + 11 + jLen, ty + th + 48, '#38bdf8', 3, 8);
-      drawArrow(ctx, sx - 11, ty + th + 42, sx - 11 - jLen, ty + th + 48, '#38bdf8', 3, 8);
+      const jLen = Math.min(compact ? 45 : 72, v_port * (compact ? 95 : 130));
+      drawArrow(ctx, sx + 9, ty + th + senH - 8, sx + 9 + jLen, ty + th + senH - 3, '#38bdf8', 2.5, 6);
+      drawArrow(ctx, sx - 9, ty + th + senH - 8, sx - 9 - jLen, ty + th + senH - 3, '#38bdf8', 2.5, 6);
 
-      // Moving droplets in jet
-      for (let i = 0; i < 6; i++) {
-        const u = ((t * v_port * 2.2 + i / 6) % 1);
-        ctx.fillStyle = '#7dd3fc';
-        ctx.beginPath();
-        ctx.arc(sx + 11 + jLen * u, ty + th + 42 + 6 * u, 2.5, 0, Math.PI * 2);
-        ctx.arc(sx - 11 - jLen * u, ty + th + 42 + 6 * u, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Live KPI Readout Box (Top Right)
-      const kx = tx + tw + 24, ky = 28, kw = w - kx - 22, kh = 145;
+      const kx = tx + tw + (compact ? 12 : 22);
+      const ky = ty;
+      const kw = w - kx - (compact ? 12 : 20);
+      const kh = compact ? 124 : 142;
       ctx.fillStyle = '#111827';
       ctx.strokeStyle = '#24324d';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.roundRect(kx, ky, kw, kh, 8);
+      ctx.roundRect(kx, ky, kw, kh, 7);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#38bdf8';
-      ctx.font = `bold 12.5px ${FONT}`;
-      ctx.fillText('リアルタイム物理量計算値（連続の式）', kx + 14, ky + 22);
+      ctx.font = `bold ${compact ? 10.5 : 12.5}px ${FONT}`;
+      ctx.fillText(compact ? '物理量計算値（連続の式）' : 'リアルタイム物理量計算値（連続の式）', kx + 10, ky + 19);
 
       const rows = [
-        ['体積流量 Q = W·T·Vc', `${Q_Lmin.toFixed(1)} L/min`, '#e2e8f0'],
-        ['ポート実吐出流速 v_port', `${v_port.toFixed(3)} m/s`, '#38bdf8'],
-        ['自由落下理論流速 √2gH', `${v_torr.toFixed(2)} m/s`, '#94a3b8'],
-        ['ストッパー開度比 η_stop', `${(eta * 100).toFixed(1)} %`, eta > 0.85 ? '#fb7185' : '#10b981']
+        [compact ? '体積流量 Q' : '体積流量 Q = W·T·Vc', `${Q_Lmin.toFixed(1)} L/m`, '#e2e8f0'],
+        [compact ? 'ポート流速 v_port' : 'ポート実吐出流速 v_port', `${v_port.toFixed(3)} m/s`, '#38bdf8'],
+        [compact ? '理論流速 √2gH' : '自由落下理論流速 √2gH', `${v_torr.toFixed(2)} m/s`, '#94a3b8'],
+        [compact ? 'ストッパー開度 η' : 'ストッパー開度比 η_stop', `${(eta * 100).toFixed(1)} %`, eta > 0.85 ? '#fb7185' : '#10b981']
       ];
       rows.forEach((r, idx) => {
-        const ry = ky + 48 + idx * 24;
+        const ry = ky + (compact ? 42 : 46) + idx * (compact ? 21 : 24);
         ctx.fillStyle = '#cbd5e1';
-        ctx.font = `12px ${FONT}`;
-        ctx.fillText(r[0], kx + 14, ry);
+        ctx.font = `${compact ? 10.5 : 12}px ${FONT}`;
+        ctx.fillText(r[0], kx + 10, ry);
         ctx.fillStyle = r[2];
-        ctx.font = `bold 13px ${MONO}`;
+        ctx.font = `bold ${compact ? 11 : 13}px ${MONO}`;
         ctx.textAlign = 'right';
-        ctx.fillText(r[1], kx + kw - 14, ry);
+        ctx.fillText(r[1], kx + kw - 10, ry);
         ctx.textAlign = 'left';
       });
 
-      // Bottom Chart: 2D Slit Decay vs 3D Depth-Averaged Jet Decay
-      const gx = 48, gy = 212, gw = w - 74, gh = h - gy - 32;
-      if (gh > 65) {
+      const gx = compact ? 16 : 44;
+      const gy = compact ? 166 : 206;
+      const gw = w - gx - (compact ? 14 : 24);
+      const gh = h - gy - 20;
+      if (gh > 55) {
         ctx.fillStyle = '#0f172a';
         ctx.strokeStyle = '#24324d';
         ctx.fillRect(gx, gy, gw, gh);
         ctx.strokeRect(gx, gy, gw, gh);
 
         ctx.fillStyle = '#cbd5e1';
-        ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText('ノズルからの距離 x に伴うジェット中心流速の減衰比較（3D広がり抵抗の効果）', gx + 10, gy - 8);
+        ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+        ctx.fillText(compact ? 'ノズル距離 x とジェット中心流速減衰比較' : 'ノズルからの距離 x に伴うジェット中心流速の減衰比較（3D広がり抵抗の効果）', gx + 6, gy - 6);
 
-        // Plot curves
-        // 1. Uncorrected 2D slit: ~ 1 / sqrt(1 + 2.5 x)
         ctx.strokeStyle = '#fb7185';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1705,13 +1908,12 @@
           const u = i / 60;
           const vNorm = 1 / Math.sqrt(1 + 2.8 * u);
           const px = gx + u * gw;
-          const py = gy + gh - vNorm * (gh - 16) - 8;
+          const py = gy + gh - vNorm * (gh - 12) - 6;
           if (i === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
 
-        // 2. 3D Depth-averaged (with f_3D): ~ 1 / (1 + 5.5 x)
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -1719,17 +1921,19 @@
           const u = i / 60;
           const vNorm = 1 / (1 + 5.5 * u);
           const px = gx + u * gw;
-          const py = gy + gh - vNorm * (gh - 16) - 8;
+          const py = gy + gh - vNorm * (gh - 12) - 6;
           if (i === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
 
-        // Legend
+        ctx.font = `${compact ? 9.5 : 11.5}px ${FONT}`;
+        ctx.textAlign = 'right';
         ctx.fillStyle = '#fb7185';
-        ctx.fillText('― 補正なし単純2D（壁面衝突が過大）', gx + gw - 235, gy + 20);
+        ctx.fillText(compact ? '― 単純2D（過大評価）' : '― 補正なし単純2D（壁面衝突が過大）', gx + gw - 8, gy + 16);
         ctx.fillStyle = '#38bdf8';
-        ctx.fillText('― 3D奥行き減衰項 f_3D 導入（実機一致）', gx + gw - 235, gy + 38);
+        ctx.fillText(compact ? '― 3D減衰導入（実機一致）' : '― 3D奥行き減衰項 f_3D 導入（実機一致）', gx + gw - 8, gy + 32);
+        ctx.textAlign = 'left';
       }
     };
   })();
@@ -1743,40 +1947,39 @@
     let showNuT = true;
     document.getElementById('btn3_mode').onclick = function() {
       showNuT = !showNuT;
-      this.textContent = showNuT ? '表示: 渦粘性 νt ヒートマップ＋流線' : '表示: 速度ベクトル場のみ';
+      this.textContent = showNuT ? '表示: 渦粘性 νt＋流線' : '表示: 速度場のみ';
     };
 
-    const particles = Array.from({ length: 90 }, () => ({
+    const particles = Array.from({ length: 85 }, () => ({
       x: Math.random(),
-      y: Math.random(),
-      age: Math.random()
+      y: Math.random()
     }));
 
-    return (t) => {
+    return () => {
       const { w, h } = c.resize();
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
+      const compact = w < 490;
       const cs = getCs();
-      const padX = 44, padY = 26;
-      const mw = w - padX * 2, mh = h - padY * 2 - 14;
+      const padX = compact ? 16 : 40;
+      const padY = 22;
+      const mw = w - padX * 2, mh = h - padY - 24;
       const cx = padX + mw / 2;
       const portY = padY + mh * 0.28;
 
-      // Render Grid Heatmap for |S| and eddy viscosity nu_t
-      const cols = 38, rows = 28;
+      const cols = 36, rows = 26;
       const cw = mw / cols, ch = mh / rows;
       const spread = 0.08 + cs * 0.65;
 
       for (let j = 0; j < rows; j++) {
         for (let i = 0; i < cols; i++) {
-          const nx = (i + 0.5) / cols; // 0..1
-          const ny = (j + 0.5) / rows; // 0..1
-          const distFromCenter = Math.abs(nx - 0.5) * 2; // 0..1
+          const nx = (i + 0.5) / cols;
+          const ny = (j + 0.5) / rows;
+          const distFromCenter = Math.abs(nx - 0.5) * 2;
           const jetCenterY = 0.28 + distFromCenter * 0.14;
           const dy = Math.abs(ny - jetCenterY);
 
-          // Shear rate |S| peaks at the upper and lower edges of the jet
           const jetCore = Math.exp(-(dy * dy) / (spread * spread)) * (1 - distFromCenter * 0.35);
           const shear = (dy / spread) * jetCore * 1.8;
           const nu_t = Math.min(1, (cs / 0.16) * shear * 1.15);
@@ -1793,25 +1996,23 @@
         }
       }
 
-      // Mold border & SEN
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 2;
       ctx.strokeRect(padX, padY, mw, mh);
 
       ctx.fillStyle = '#334155';
-      ctx.fillRect(cx - 14, padY - 6, 28, mh * 0.31);
-      ctx.strokeRect(cx - 14, padY - 6, 28, mh * 0.31);
+      ctx.fillRect(cx - 12, padY - 4, 24, mh * 0.31);
+      ctx.strokeRect(cx - 12, padY - 4, 24, mh * 0.31);
 
-      // Double roll vortex streamlines
       const rollCenters = [
-        { x: padX + mw * 0.24, y: padY + mh * 0.16, dir: 1 },
-        { x: padX + mw * 0.76, y: padY + mh * 0.16, dir: -1 },
-        { x: padX + mw * 0.24, y: padY + mh * 0.64, dir: -1 },
-        { x: padX + mw * 0.76, y: padY + mh * 0.64, dir: 1 }
+        { x: padX + mw * 0.24, y: padY + mh * 0.16 },
+        { x: padX + mw * 0.76, y: padY + mh * 0.16 },
+        { x: padX + mw * 0.24, y: padY + mh * 0.64 },
+        { x: padX + mw * 0.76, y: padY + mh * 0.64 }
       ];
 
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-      ctx.lineWidth = 1.3;
+      ctx.lineWidth = 1.2;
       rollCenters.forEach((rc, idx) => {
         const rx = mw * (idx < 2 ? 0.17 : 0.18);
         const ry = mh * (idx < 2 ? 0.10 : 0.22);
@@ -1820,7 +2021,6 @@
         ctx.stroke();
       });
 
-      // Moving fluid tracer particles showing double roll + turbulent mixing
       particles.forEach(p => {
         if (!paused) {
           const isRight = p.x >= 0.5;
@@ -1839,16 +2039,16 @@
         }
         ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
         ctx.beginPath();
-        ctx.arc(padX + p.x * mw, padY + p.y * mh, 2, 0, Math.PI * 2);
+        ctx.arc(padX + p.x * mw, padY + p.y * mh, 1.9, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // Labels
       ctx.fillStyle = '#fbbf24';
-      ctx.font = `bold 11.5px ${FONT}`;
-      ctx.fillText('← ジェット縁（せん断層）で渦粘性 νt が急増し運動量を拡散', cx + 22, portY - 12);
+      ctx.font = `bold ${compact ? 10 : 11.5}px ${FONT}`;
+      ctx.fillText(compact ? '← せん断層で νt 急増' : '← ジェット縁（せん断層）で渦粘性 νt が急増し運動量を拡散', cx + 16, portY - 10);
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText(`Cs = ${cs.toFixed(2)} : ${cs < 0.04 ? '乱流粘性ゼロ（不安定・細すぎる噴流）' : '適切な乱流拡散とダブルロール形成'}`, padX, h - 8);
+      ctx.font = `${compact ? 10 : 11}px ${FONT}`;
+      ctx.fillText(`Cs = ${cs.toFixed(2)} : ${cs < 0.04 ? '乱流粘性ゼロ（不安定・細すぎる噴流）' : '適切な乱流拡散とダブルロール形成'}`, padX, h - 7);
     };
   })();
 
@@ -1879,18 +2079,17 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
+      const compact = w < 490;
       const vel = getVel();
       const cfl = 0.45 * vel;
 
       if (!paused) {
-        // Advance 1st order upwind
         const next1 = new Float32Array(N);
         for (let i = 1; i < N; i++) {
           next1[i] = u1[i] - cfl * (u1[i] - u1[i - 1]);
         }
         u1 = next1;
 
-        // Advance 2nd order MacCormack with local min/max clamp
         const pred = new Float32Array(N);
         for (let i = 0; i < N - 1; i++) {
           pred[i] = u2[i] - cfl * (u2[i + 1] - u2[i]);
@@ -1904,53 +2103,52 @@
         }
         u2 = next2;
 
-        // Auto-reinject if reached right wall
         if (u2[N - 12] > 0.25) resetPulses();
       }
 
-      const padX = 36, gw = w - padX * 2;
-      const topY = 36, rowH = (h - 90) / 2;
+      const padX = compact ? 16 : 34;
+      const gw = w - padX * 2;
+      const topY = 26, rowH = (h - 68) / 2;
 
-      // Top Track: 1st Order Upwind
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
-      ctx.fillRect(padX, topY, gw, rowH - 12);
-      ctx.strokeRect(padX, topY, gw, rowH - 12);
+      ctx.fillRect(padX, topY, gw, rowH - 10);
+      ctx.strokeRect(padX, topY, gw, rowH - 10);
 
       for (let i = 0; i < N; i++) {
         const val = u1[i];
         if (val > 0.01) {
           ctx.fillStyle = `rgba(244, 63, 94, ${val * 0.85})`;
-          ctx.fillRect(padX + (i / N) * gw, topY + 24, gw / N + 1, rowH - 42);
+          ctx.fillRect(padX + (i / N) * gw, topY + 24, gw / N + 1, rowH - 40);
         }
       }
       ctx.fillStyle = '#fb7185';
-      ctx.font = `bold 12.5px ${FONT}`;
-      ctx.fillText('① 1次精度風上差分（数値拡散により噴流コアが途中で消滅・鈍化）', padX + 10, topY + 18);
+      ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+      ctx.fillText(compact ? '① 1次精度風上差分（数値拡散で途中で鈍化）' : '① 1次精度風上差分（数値拡散により噴流コアが途中で消滅・鈍化）', padX + 8, topY + 17);
 
-      // Bottom Track: 2nd Order MacCormack
-      const botY = topY + rowH + 10;
+      const botY = topY + rowH + 8;
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
-      ctx.fillRect(padX, botY, gw, rowH - 12);
-      ctx.strokeRect(padX, botY, gw, rowH - 12);
+      ctx.fillRect(padX, botY, gw, rowH - 10);
+      ctx.strokeRect(padX, botY, gw, rowH - 10);
 
       for (let i = 0; i < N; i++) {
         const val = u2[i];
         if (val > 0.01) {
           ctx.fillStyle = `rgba(56, 189, 248, ${val * 0.9})`;
-          ctx.fillRect(padX + (i / N) * gw, botY + 24, gw / N + 1, rowH - 42);
+          ctx.fillRect(padX + (i / N) * gw, botY + 24, gw / N + 1, rowH - 40);
         }
       }
       ctx.fillStyle = '#38bdf8';
-      ctx.font = `bold 12.5px ${FONT}`;
-      ctx.fillText('② 2次精度 MacCormack法＋TVDクランプ（運動量を鋭く保持し壁面へ到達）', padX + 10, botY + 18);
+      ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+      ctx.fillText(compact ? '② 2次精度 MacCormack法（運動量を保持し壁面到達）' : '② 2次精度 MacCormack法＋TVDクランプ（運動量を鋭く保持し壁面へ到達）', padX + 8, botY + 17);
 
-      // Short-face wall marker on right
       ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(padX + gw - 4, topY, 4, botY + rowH - 12 - topY);
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText('短辺壁面', padX + gw - 48, h - 10);
+      ctx.fillRect(padX + gw - 4, topY, 4, botY + rowH - 10 - topY);
+      ctx.font = `10.5px ${FONT}`;
+      ctx.textAlign = 'right';
+      ctx.fillText('短辺壁面', padX + gw, h - 8);
+      ctx.textAlign = 'left';
     };
   })();
 
@@ -1967,36 +2165,35 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
-      const Tcast = getTemp(); // 980..1120
-      const jetPct = getJet() / 100; // 0..1
+      const compact = w < 490;
+      const Tcast = getTemp();
+      const jetPct = getJet() / 100;
       const superheatFactor = Math.max(0.45, 1.35 - (Tcast - 980) / 160);
 
-      // Left: Mold wall & Solidifying Shell with local remelting notch
-      const wx = 44, wy = 32, mh = h - 68, maxW = w * 0.44;
+      const wx = compact ? 22 : 40;
+      const wy = 28;
+      const mh = h - 54;
+      const maxW = w * (compact ? 0.42 : 0.44);
       const impingeY = wy + mh * 0.36;
 
-      // Liquid background
       ctx.fillStyle = 'rgba(245, 158, 11, 0.16)';
       ctx.fillRect(wx, wy, maxW, mh);
 
-      // Compute shell profile along depth y
       const ptsSolid = [];
       const ptsMushy = [];
       const steps = 60;
       for (let i = 0; i <= steps; i++) {
-        const u = i / steps; // 0 (meniscus) to 1 (bottom)
+        const u = i / steps;
         const y = wy + u * mh;
         let thick = Math.sqrt(u) * (maxW * 0.36) * superheatFactor;
-        // Local remelting around impingement depth
         const dy = (y - impingeY) / (mh * 0.11);
         const remelt = jetPct * (maxW * 0.22) * Math.exp(-dy * dy);
         thick = Math.max(2, thick - remelt);
-        const mushThick = thick + 10 + 6 * Math.sqrt(u);
+        const mushThick = thick + 8 + 5 * Math.sqrt(u);
         ptsSolid.push({ x: wx + thick, y });
         ptsMushy.push({ x: wx + mushThick, y });
       }
 
-      // Draw Mushy Zone (915..955 C)
       ctx.fillStyle = 'rgba(251, 191, 36, 0.32)';
       ctx.beginPath();
       ctx.moveTo(wx, wy);
@@ -2005,7 +2202,6 @@
       ctx.closePath();
       ctx.fill();
 
-      // Draw Solid Shell (< 915 C)
       ctx.fillStyle = '#475569';
       ctx.beginPath();
       ctx.moveTo(wx, wy);
@@ -2014,7 +2210,6 @@
       ctx.closePath();
       ctx.fill();
 
-      // Solidus & Liquidus contours
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -2028,42 +2223,39 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Mold copper wall
       ctx.fillStyle = '#b45309';
-      ctx.fillRect(wx - 10, wy, 10, mh);
+      ctx.fillRect(wx - 8, wy, 8, mh);
 
-      // Hot jet arrow hitting impingement point
       if (jetPct > 0.05) {
-        const jStart = wx + maxW - 10;
+        const jStart = wx + maxW - 8;
         const jEnd = wx + maxW * 0.28;
-        drawArrow(ctx, jStart, impingeY, jEnd, impingeY, '#fb7185', 2 + jetPct * 3, 8);
-        // Animated heat waves
+        drawArrow(ctx, jStart, impingeY, jEnd, impingeY, '#fb7185', 2 + jetPct * 2.5, 7);
         const pulse = (t * 60) % 40;
         ctx.strokeStyle = 'rgba(251, 113, 133, 0.6)';
         ctx.beginPath();
-        ctx.arc(jEnd - 6, impingeY, 6 + pulse * 0.4, -0.7, 0.7);
+        ctx.arc(jEnd - 5, impingeY, 5 + pulse * 0.35, -0.7, 0.7);
         ctx.stroke();
       }
 
-      // Labels on Left
       ctx.fillStyle = '#e2e8f0';
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText('固相線 Ts=915℃', wx + 6, wy + mh - 10);
+      ctx.font = `${compact ? 9.5 : 11}px ${FONT}`;
+      ctx.fillText('固相線 915℃', wx + 4, wy + mh - 8);
       ctx.fillStyle = '#fbbf24';
-      ctx.fillText('液相線 TL=955℃ (共存域)', wx + 82, wy + mh - 26);
+      ctx.fillText('液相線 955℃', wx + 4, wy + mh - 22);
 
-      // Right: Temperature & Solid Fraction fs Profile at Impingement Depth
-      const rx = wx + maxW + 26, ry = 42, rw = w - rx - 20, rh = h - 84;
+      const rx = wx + maxW + (compact ? 14 : 24);
+      const ry = 36;
+      const rw = w - rx - (compact ? 12 : 18);
+      const rh = h - 68;
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
       ctx.fillRect(rx, ry, rw, rh);
       ctx.strokeRect(rx, ry, rw, rh);
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = `bold 12px ${FONT}`;
-      ctx.fillText('衝突高さでの温度 T(x) と固相率 fs(x)', rx + 10, ry - 10);
+      ctx.font = `bold ${compact ? 10 : 12}px ${FONT}`;
+      ctx.fillText(compact ? '衝突部の T(x) と fs(x)' : '衝突高さでの温度 T(x) と固相率 fs(x)', rx + 6, ry - 8);
 
-      // TL & TS horizontal guide lines
       const yTL = ry + rh * (1 - (955 - 800) / (1150 - 800));
       const yTS = ry + rh * (1 - (915 - 800) / (1150 - 800));
       ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
@@ -2074,13 +2266,12 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Temperature curve T(x)
       const shellNorm = Math.max(0.05, 0.38 * superheatFactor - jetPct * 0.24);
       ctx.strokeStyle = '#fb7185';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
       for (let i = 0; i <= 50; i++) {
-        const u = i / 50; // 0 (wall) to 1 (bulk)
+        const u = i / 50;
         const temp = 830 + (Tcast - 830) * (1 - Math.exp(-u / shellNorm));
         const px = rx + u * rw;
         const py = ry + rh * (1 - (temp - 800) / (1150 - 800));
@@ -2089,7 +2280,6 @@
       }
       ctx.stroke();
 
-      // Solid fraction curve fs(x)
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -2098,16 +2288,19 @@
         const temp = 830 + (Tcast - 830) * (1 - Math.exp(-u / shellNorm));
         const fs = Math.max(0, Math.min(1, (955 - temp) / 40));
         const px = rx + u * rw;
-        const py = ry + rh - fs * (rh - 14) - 7;
+        const py = ry + rh - fs * (rh - 12) - 6;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
 
+      ctx.font = `${compact ? 9.5 : 11}px ${FONT}`;
+      ctx.textAlign = 'right';
       ctx.fillStyle = '#fb7185';
-      ctx.fillText('― 温度分布 T(x)', rx + rw - 115, ry + 20);
+      ctx.fillText('― 温度 T(x)', rx + rw - 6, ry + 16);
       ctx.fillStyle = '#38bdf8';
-      ctx.fillText('― 固相率 fs(x)', rx + rw - 115, ry + 38);
+      ctx.fillText('― 固相率 fs', rx + rw - 6, ry + 31);
+      ctx.textAlign = 'left';
     };
   })();
 
@@ -2125,92 +2318,87 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
+      const compact = w < 490;
       const angDeg = getAng();
       const dep = getDep();
       const angRad = (angDeg * Math.PI) / 180;
 
-      // Estimate surface velocity u_surf (m/s)
       const shallowFactor = 110 / dep;
       const angleFactor = Math.max(0.15, 0.32 + (angDeg + 15) * 0.014);
       const u_surf = Math.min(0.65, 0.22 * shallowFactor * angleFactor);
       const u_crit = 0.28;
       const isEntraining = u_surf > u_crit;
 
-      const mx = 42, my = 46, mw = w - 84, mh = h - 76;
+      const mx = compact ? 18 : 40;
+      const my = 32;
+      const mw = w - mx * 2;
+      const mh = h - 52;
       const cx = mx + mw / 2;
-      const surfY = my + 28;
+      const surfY = my + 24;
 
-      // Mold fluid background
       ctx.fillStyle = 'rgba(14, 116, 144, 0.16)';
-      ctx.fillRect(mx, surfY, mw, mh - 28);
+      ctx.fillRect(mx, surfY, mw, mh - 24);
 
-      // Meniscus wave height (visualized clearly)
       const dh_mm = ((u_surf * u_surf) / (2 * 9.81)) * 1000;
-      const visAmp = Math.min(22, dh_mm * 2.4 + (isEntraining ? 3 : 0));
+      const visAmp = Math.min(20, dh_mm * 2.3 + (isEntraining ? 3 : 0));
 
-      // Flux / Oxide cover layer on top
       ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
       ctx.beginPath();
-      ctx.moveTo(mx, surfY - 6);
-      ctx.lineTo(mx + mw, surfY - 6);
+      ctx.moveTo(mx, surfY - 5);
+      ctx.lineTo(mx + mw, surfY - 5);
       for (let x = mw; x >= 0; x -= 4) {
         const nx = (x - mw / 2) / (mw / 2);
         const hump = Math.sin(Math.abs(nx) * Math.PI);
-        const khRipple = isEntraining ? Math.sin(x * 0.25 - t * 14) * 3.5 * hump : 0;
+        const khRipple = isEntraining ? Math.sin(x * 0.25 - t * 14) * 3.2 * hump : 0;
         const wy = surfY - hump * visAmp * (0.85 + 0.15 * Math.sin(t * 6 + x * 0.08)) + khRipple;
         ctx.lineTo(mx + x, wy);
       }
       ctx.closePath();
       ctx.fill();
 
-      // Meniscus line
       ctx.strokeStyle = isEntraining ? '#fb7185' : '#fbbf24';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
       for (let x = 0; x <= mw; x += 4) {
         const nx = (x - mw / 2) / (mw / 2);
         const hump = Math.sin(Math.abs(nx) * Math.PI);
-        const khRipple = isEntraining ? Math.sin(x * 0.25 - t * 14) * 3.5 * hump : 0;
+        const khRipple = isEntraining ? Math.sin(x * 0.25 - t * 14) * 3.2 * hump : 0;
         const wy = surfY - hump * visAmp * (0.85 + 0.15 * Math.sin(t * 6 + x * 0.08)) + khRipple;
         if (x === 0) ctx.moveTo(mx + x, wy);
         else ctx.lineTo(mx + x, wy);
       }
       ctx.stroke();
 
-      // Mold walls
       ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.2;
       ctx.strokeRect(mx, my, mw, mh);
 
-      // SEN Nozzle
-      const nozLen = 28 + (dep / 180) * 115;
+      const nozLen = 24 + (dep / 180) * (compact ? 85 : 110);
       ctx.fillStyle = '#334155';
       ctx.strokeStyle = '#94a3b8';
-      ctx.fillRect(cx - 15, my - 8, 30, nozLen);
-      ctx.strokeRect(cx - 15, my - 8, 30, nozLen);
+      ctx.fillRect(cx - 13, my - 6, 26, nozLen);
+      ctx.strokeRect(cx - 13, my - 6, 26, nozLen);
 
-      // Jet vectors & Upper roll arrows
-      const portY = my + nozLen - 14;
+      const portY = my + nozLen - 12;
+      const jetLen = compact ? 52 : 72;
       [-1, 1].forEach(side => {
-        const jx = cx + side * 15;
-        const ex = jx + side * Math.cos(angRad) * 75;
-        const ey = portY - Math.sin(angRad) * 75;
-        drawArrow(ctx, jx, portY, ex, ey, '#38bdf8', 2.8, 8);
+        const jx = cx + side * 13;
+        const ex = jx + side * Math.cos(angRad) * jetLen;
+        const ey = portY - Math.sin(angRad) * jetLen;
+        drawArrow(ctx, jx, portY, ex, ey, '#38bdf8', 2.5, 7);
 
-        // Surface return arrow
-        const sStart = mx + (side === 1 ? mw - 36 : 36);
-        const sEnd = sStart - side * (30 + u_surf * 110);
-        drawArrow(ctx, sStart, surfY + 14, sEnd, surfY + 14, isEntraining ? '#fb7185' : '#10b981', 2.2, 6);
+        const sStart = mx + (side === 1 ? mw - 24 : 24);
+        const sEnd = sStart - side * (22 + u_surf * (compact ? 65 : 105));
+        drawArrow(ctx, sStart, surfY + 13, sEnd, surfY + 13, isEntraining ? '#fb7185' : '#10b981', 2, 5);
       });
 
-      // Spawn KH entrained droplets when u_surf > u_crit
       if (!paused && isEntraining && Math.random() < (u_surf - u_crit) * 1.8) {
         const side = Math.random() < 0.5 ? -1 : 1;
         entrained.push({
-          x: mx + (side === 1 ? mw - 30 - Math.random() * 45 : 30 + Math.random() * 45),
+          x: mx + (side === 1 ? mw - 24 - Math.random() * 36 : 24 + Math.random() * 36),
           y: surfY + 4,
-          vx: -side * (0.4 + Math.random() * 0.8),
-          vy: 0.7 + Math.random() * 1.1,
+          vx: -side * (0.4 + Math.random() * 0.7),
+          vy: 0.65 + Math.random() * 1.0,
           life: 1.0
         });
       }
@@ -2223,30 +2411,36 @@
           p.vy *= 0.985;
           p.life -= 0.012;
         }
-        if (p.life <= 0 || p.y > my + mh - 8) {
+        if (p.life <= 0 || p.y > my + mh - 46) {
           entrained.splice(i, 1);
           continue;
         }
         ctx.fillStyle = `rgba(251, 113, 133, ${p.life})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 3.3, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Status HUD Banner
-      ctx.fillStyle = isEntraining ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.16)';
+      const boxH = compact ? 42 : 34;
+      ctx.fillStyle = isEntraining ? 'rgba(244, 63, 94, 0.22)' : 'rgba(16, 185, 129, 0.18)';
       ctx.strokeStyle = isEntraining ? '#fb7185' : '#10b981';
       ctx.beginPath();
-      ctx.roundRect(mx + 12, my + mh - 46, mw - 24, 36, 6);
+      ctx.roundRect(mx + 8, my + mh - boxH - 8, mw - 16, boxH, 6);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = isEntraining ? '#fda4af' : '#6ee7b7';
-      ctx.font = `bold 12px ${FONT}`;
-      const statusTxt = isEntraining
-        ? `⚠ KHせん断巻き込み発生中！ u_surf = ${u_surf.toFixed(2)} m/s > 0.28 m/s (波高 Δh = ${dh_mm.toFixed(1)} mm)`
-        : `✓ 安定鏡面湯面：u_surf = ${u_surf.toFixed(2)} m/s ≤ 0.28 m/s (実寸波高 Δh = ${dh_mm.toFixed(2)} mm)`;
-      ctx.fillText(statusTxt, mx + 22, my + mh - 24);
+      ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+      if (compact) {
+        ctx.fillText(isEntraining ? '⚠ KHせん断巻き込み発生中！' : '✓ 安定鏡面湯面', mx + 16, my + mh - boxH + 8);
+        ctx.font = `10px ${MONO}`;
+        ctx.fillText(`u_surf=${u_surf.toFixed(2)}m/s (臨界0.28) / Δh=${dh_mm.toFixed(1)}mm`, mx + 16, my + mh - boxH + 24);
+      } else {
+        const statusTxt = isEntraining
+          ? `⚠ KHせん断巻き込み発生中！ u_surf = ${u_surf.toFixed(2)} m/s > 0.28 m/s (波高 Δh = ${dh_mm.toFixed(1)} mm)`
+          : `✓ 安定鏡面湯面：u_surf = ${u_surf.toFixed(2)} m/s ≤ 0.28 m/s (実寸波高 Δh = ${dh_mm.toFixed(2)} mm)`;
+        ctx.fillText(statusTxt, mx + 18, my + mh - 20);
+      }
     };
   })();
 
@@ -2258,10 +2452,10 @@
     const getDown = bindSlider('s7_down', 'v7_down', v => `${v.toFixed(2)} m/s`);
 
     const specs = [
-      { label: '介在物 80μm', dp: 80, uTerm: 0.004, col: '#fbbf24', r: 3.2 },
-      { label: '微細気泡 150μm', dp: 150, uTerm: 0.018, col: '#38bdf8', r: 4.0 },
-      { label: '中気泡 500μm', dp: 500, uTerm: 0.095, col: '#34d399', r: 5.5 },
-      { label: '粗大気泡 1.5mm', dp: 1500, uTerm: 0.240, col: '#a78bfa', r: 7.5 }
+      { label: '介在物 80μm', s1: '介在物', s2: '80μm', dp: 80, uTerm: 0.004, col: '#fbbf24', r: 3.0 },
+      { label: '微細気泡 150μm', s1: '微細泡', s2: '150μm', dp: 150, uTerm: 0.018, col: '#38bdf8', r: 3.8 },
+      { label: '中気泡 500μm', s1: '中気泡', s2: '500μm', dp: 500, uTerm: 0.095, col: '#34d399', r: 5.0 },
+      { label: '粗大気泡 1.5mm', s1: '粗大泡', s2: '1.5mm', dp: 1500, uTerm: 0.240, col: '#a78bfa', r: 6.8 }
     ];
 
     let activeParticles = [];
@@ -2282,47 +2476,50 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
-      const uDown = getDown(); // m/s downward fluid velocity
-      const padX = 36, padY = 34;
-      const areaW = w * 0.54, areaH = h - padY - 30;
+      const compact = w < 490;
+      const uDown = getDown();
+      const padX = compact ? 14 : 32;
+      const padY = 28;
+      const areaW = w * (compact ? 0.53 : 0.54);
+      const areaH = h - padY - (compact ? 32 : 28);
 
-      // Fluid column with downward arrows
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
       ctx.fillRect(padX, padY, areaW, areaH);
       ctx.strokeRect(padX, padY, areaW, areaH);
 
-      // Meniscus line at top
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(padX, padY + 18);
-      ctx.lineTo(padX + areaW, padY + 18);
+      ctx.moveTo(padX, padY + 16);
+      ctx.lineTo(padX + areaW, padY + 16);
       ctx.stroke();
       ctx.fillStyle = '#fbbf24';
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText('湯面（浮上排出ライン）', padX + 8, padY + 13);
+      ctx.font = `${compact ? 9.5 : 11}px ${FONT}`;
+      ctx.fillText('湯面（浮上排出）', padX + 6, padY + 12);
 
-      // Periodic auto spawn
       if (!paused && Math.floor(t * 60) % 75 === 0) spawnBatch();
 
-      // Lane headers & downward background arrows
       specs.forEach((sp, i) => {
         const lx = padX + (areaW / 4) * (i + 0.5);
-        const arrowShift = (t * uDown * 220) % 45;
-        drawArrow(ctx, lx, padY + 34 + arrowShift, lx, padY + 54 + arrowShift, 'rgba(148, 163, 184, 0.25)', 1.5, 5);
+        const arrowShift = (t * uDown * 220) % 42;
+        drawArrow(ctx, lx, padY + 30 + arrowShift, lx, padY + 48 + arrowShift, 'rgba(148, 163, 184, 0.25)', 1.4, 4);
 
         ctx.fillStyle = sp.col;
-        ctx.font = `bold 10.5px ${FONT}`;
+        ctx.font = `bold ${compact ? 9 : 10.5}px ${FONT}`;
         ctx.textAlign = 'center';
-        ctx.fillText(sp.label, lx, padY + areaH + 16);
+        if (compact) {
+          ctx.fillText(sp.s1, lx, padY + areaH + 12);
+          ctx.fillText(sp.s2, lx, padY + areaH + 23);
+        } else {
+          ctx.fillText(sp.label, lx, padY + areaH + 16);
+        }
         ctx.textAlign = 'left';
       });
 
-      // Update & draw particles
       for (let i = activeParticles.length - 1; i >= 0; i--) {
         const p = activeParticles[i];
-        const netUp = p.spec.uTerm - uDown; // positive = floats up
+        const netUp = p.spec.uTerm - uDown;
         if (!paused) {
           p.yNorm -= netUp * 0.025;
         }
@@ -2336,43 +2533,42 @@
         ctx.fillStyle = p.spec.col;
         ctx.beginPath();
         if (p.spec.dp >= 1500) {
-          // Oblate spheroid for large bubble (Eo > 1)
-          ctx.ellipse(lx, py, p.spec.r * 1.3, p.spec.r * 0.72, 0, 0, Math.PI * 2);
+          ctx.ellipse(lx, py, p.spec.r * 1.25, p.spec.r * 0.72, 0, 0, Math.PI * 2);
         } else {
           ctx.arc(lx, py, p.spec.r, 0, Math.PI * 2);
         }
         ctx.fill();
       }
 
-      // Right: Terminal Velocity Curve U_term(dp) vs u_down threshold
-      const gx = padX + areaW + 24, gy = padY + 14, gw = w - gx - 20, gh = areaH - 20;
+      const gx = padX + areaW + (compact ? 12 : 22);
+      const gy = padY + 10;
+      const gw = w - gx - (compact ? 12 : 18);
+      const gh = areaH - 12;
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
       ctx.fillRect(gx, gy, gw, gh);
       ctx.strokeRect(gx, gy, gw, gh);
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = `bold 11.5px ${FONT}`;
-      ctx.fillText('粒径 dp と終端上昇速度 U_term', gx + 8, gy - 8);
+      ctx.font = `bold ${compact ? 9.5 : 11.5}px ${FONT}`;
+      ctx.fillText(compact ? '終端速度 U_term' : '粒径 dp と終端上昇速度 U_term', gx + 6, gy - 6);
 
-      // Curve
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
       for (let i = 0; i <= 50; i++) {
-        const dpNorm = i / 50; // 0..1600 um
+        const dpNorm = i / 50;
         const dp = dpNorm * 1600;
         const uRaw = 0.00022 * dp;
         const uTerm = Math.min(0.26, uRaw / (1 + dp / 1100));
         const px = gx + dpNorm * gw;
-        const py = gy + gh - (uTerm / 0.30) * (gh - 14) - 7;
+        const py = gy + gh - (uTerm / 0.30) * (gh - 12) - 6;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
 
-      // Downward flow horizontal line
-      const yDown = gy + gh - (uDown / 0.30) * (gh - 14) - 7;
+      const yDown = gy + gh - (uDown / 0.30) * (gh - 12) - 6;
       ctx.strokeStyle = '#fb7185';
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
@@ -2382,8 +2578,9 @@
       ctx.setLineDash([]);
 
       ctx.fillStyle = '#fb7185';
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText(`下降流速 ${uDown.toFixed(2)} m/s（これより下は深部持ち込み）`, gx + 8, Math.max(gy + 16, yDown - 6));
+      ctx.font = `${compact ? 9 : 11}px ${FONT}`;
+      const labelY = Math.max(gy + 14, yDown - 5);
+      ctx.fillText(compact ? `下降流 ${uDown.toFixed(2)}m/s` : `下降流速 ${uDown.toFixed(2)} m/s（以下は深部持ち込み）`, gx + 5, labelY);
     };
   })();
 
@@ -2399,7 +2596,7 @@
       x: 0.48 + (i % 4) * 0.09,
       y: i / 14,
       trapped: false,
-      dp: i % 2 === 0 ? 5.5 : 3.8
+      dp: i % 2 === 0 ? 5.0 : 3.6
     }));
 
     return (t) => {
@@ -2407,32 +2604,34 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
-      const utan = getUtan(); // m/s
-      const vsol = getVsol(); // mm/s
+      const compact = w < 490;
+      const utan = getUtan();
+      const vsol = getVsol();
 
-      // Critical velocity increases with wash-out utan
-      const vcr = 0.35 + utan * 6.5; // mm/s
+      const vcr = 0.35 + utan * 6.5;
       const isEngulfing = vsol > vcr;
 
-      const padX = 36, padY = 34, mw = w - 72, mh = h - 78;
-      const frontX = padX + mw * 0.42;
+      const padX = compact ? 16 : 34;
+      const padY = 26;
+      const mw = w - padX * 2;
+      const bannerH = compact ? 42 : 32;
+      const mh = h - padY - bannerH - 16;
+      const frontX = padX + mw * 0.40;
 
-      // Liquid region
       ctx.fillStyle = 'rgba(56, 189, 248, 0.10)';
       ctx.fillRect(frontX, padY, padX + mw - frontX, mh);
 
-      // Solid shell + Dendrite teeth
       ctx.fillStyle = '#334155';
       ctx.fillRect(padX, padY, frontX - padX, mh);
 
-      const teeth = 16;
+      const teeth = 15;
       const toothH = mh / teeth;
       ctx.fillStyle = '#475569';
       ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.1;
       for (let i = 0; i < teeth; i++) {
         const ty = padY + i * toothH;
-        const tipX = frontX + 18 + Math.sin(i * 1.7) * 4;
+        const tipX = frontX + (compact ? 13 : 18) + Math.sin(i * 1.7) * 3;
         ctx.beginPath();
         ctx.moveTo(frontX, ty);
         ctx.lineTo(tipX, ty + toothH * 0.5);
@@ -2442,20 +2641,18 @@
         ctx.stroke();
       }
 
-      // Tangential wash-out flow arrows in liquid
       if (utan > 0.01) {
         for (let k = 0; k < 4; k++) {
-          const ax = frontX + 42 + k * ((mw * 0.52) / 4);
-          const shift = (t * utan * 420) % 60;
-          drawArrow(ctx, ax, padY + 20 + shift, ax, padY + 56 + shift, 'rgba(56, 189, 248, 0.45)', 2, 6);
+          const ax = frontX + 32 + k * ((mw * 0.52) / 4);
+          const shift = (t * utan * 420) % 55;
+          drawArrow(ctx, ax, padY + 18 + shift, ax, padY + 50 + shift, 'rgba(56, 189, 248, 0.45)', 1.8, 5);
         }
       }
 
-      // Update & draw particles interacting with dendrite front
       testParticles.forEach(p => {
         if (!paused) {
           if (p.trapped) {
-            p.y += 0.0025; // moves slowly downward with solid shell (Vc)
+            p.y += 0.0025;
             if (p.y > 1) {
               p.y = 0;
               p.x = 0.55 + Math.random() * 0.35;
@@ -2463,14 +2660,12 @@
             }
           } else {
             p.y = (p.y + 0.002 + utan * 0.035) % 1;
-            // Drift toward interface due to solidification advance vsol
             p.x -= vsol * 0.0018;
-            if (p.x <= 0.45) {
+            if (p.x <= 0.44) {
               if (isEngulfing) {
-                p.x = 0.41;
+                p.x = 0.39;
                 p.trapped = true;
               } else {
-                // Pushed / washed out back into liquid!
                 p.x = 0.54 + Math.random() * 0.12;
               }
             }
@@ -2485,31 +2680,36 @@
         ctx.fill();
         if (p.trapped) {
           ctx.strokeStyle = '#fecdd3';
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.4;
           ctx.stroke();
         }
       });
 
-      // Labels & Verdict Banner
       ctx.fillStyle = '#e2e8f0';
-      ctx.font = `bold 12px ${FONT}`;
-      ctx.fillText('凝固シェル (固体)', padX + 14, padY + 22);
+      ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+      ctx.fillText('凝固シェル (固体)', padX + 8, padY + 19);
       ctx.fillStyle = '#38bdf8';
-      ctx.fillText('溶湯バルク (接線洗い流し流 u_tan)', frontX + 34, padY + 22);
+      ctx.fillText(compact ? '溶湯 (接線流 u_tan)' : '溶湯バルク (接線洗い流し流 u_tan)', frontX + 24, padY + 19);
 
       ctx.fillStyle = isEngulfing ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.16)';
       ctx.strokeStyle = isEngulfing ? '#fb7185' : '#10b981';
       ctx.beginPath();
-      ctx.roundRect(padX, padY + mh + 8, mw, 32, 6);
+      ctx.roundRect(padX, padY + mh + 8, mw, bannerH, 6);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = isEngulfing ? '#fda4af' : '#6ee7b7';
-      ctx.font = `bold 12px ${FONT}`;
-      const msg = isEngulfing
-        ? `判定: 捕捉 (Engulfment) — V_sol (${vsol.toFixed(1)}) > V_cr (${vcr.toFixed(2)} mm/s) デンドライト間にトラップ`
-        : `判定: 押し出し・洗い流し (Wash-out) — V_sol (${vsol.toFixed(1)}) ≤ V_cr (${vcr.toFixed(2)} mm/s) 界面から剥離`;
-      ctx.fillText(msg, padX + 12, padY + mh + 28);
+      ctx.font = `bold ${compact ? 10.5 : 12}px ${FONT}`;
+      if (compact) {
+        ctx.fillText(isEngulfing ? '判定: 捕捉 (Engulfment) — 樹間にトラップ' : '判定: 押し出し・洗い流し (Wash-out)', padX + 10, padY + mh + 24);
+        ctx.font = `10px ${MONO}`;
+        ctx.fillText(`V_sol=${vsol.toFixed(1)} mm/s ${isEngulfing ? '>' : '≤'} 臨界 V_cr=${vcr.toFixed(2)} mm/s`, padX + 10, padY + mh + 40);
+      } else {
+        const msg = isEngulfing
+          ? `判定: 捕捉 (Engulfment) — V_sol (${vsol.toFixed(1)}) > V_cr (${vcr.toFixed(2)} mm/s) デンドライト間にトラップ`
+          : `判定: 押し出し・洗い流し (Wash-out) — V_sol (${vsol.toFixed(1)}) ≤ V_cr (${vcr.toFixed(2)} mm/s) 界面から剥離`;
+        ctx.fillText(msg, padX + 12, padY + mh + 28);
+      }
     };
   })();
 
@@ -2527,27 +2727,29 @@
       const ctx = c.ctx;
       ctx.clearRect(0, 0, w, h);
 
-      const ang = getAng(); // -40..55
-      const dep = getDep(); // 50..190
-      const vc = getVc();   // 80..320
+      const compact = w < 490;
+      const ang = getAng();
+      const dep = getDep();
+      const vc = getVc();
       const vcFactor = vc / 150;
 
-      const mapX = 48, mapY = 36, mapW = w * 0.52, mapH = h - 78;
+      const mapX = compact ? 16 : 42;
+      const mapY = 26;
+      const mapW = w * (compact ? 0.50 : 0.52);
+      const mapH = h - (compact ? 52 : 66);
 
-      // Draw 2D Operating Window Heatmap (X: Angle -40..55, Y: Depth 50..190)
-      const cols = 32, rows = 26;
+      const cols = 30, rows = 24;
       const cw = mapW / cols, ch = mapH / rows;
       for (let j = 0; j < rows; j++) {
         for (let i = 0; i < cols; i++) {
           const a = -40 + (i / (cols - 1)) * 95;
-          const d = 50 + (j / (rows - 1)) * 140; // top=50mm (shallow), bottom=190mm (deep)
+          const d = 50 + (j / (rows - 1)) * 140;
 
           const rMeniscus = Math.min(1, Math.max(0, ((a + 10) / 45) * (115 / d) * vcFactor));
           const rDeep = Math.min(1, Math.max(0, ((-a + 5) / 45) * (d / 120) * Math.sqrt(vcFactor)));
           const rRemelt = Math.min(1, Math.max(0, (vcFactor - 0.7) * 0.75));
           const totalRisk = Math.min(1, Math.max(rMeniscus, rDeep * 0.9, rRemelt * 0.85));
 
-          // Color: Emerald (safe) -> Amber (caution) -> Rose (danger)
           let r, g, b;
           if (totalRisk < 0.45) {
             const u = totalRisk / 0.45;
@@ -2569,18 +2771,16 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(mapX, mapY, mapW, mapH);
 
-      // Safe zone label
       ctx.fillStyle = '#ecfdf5';
-      ctx.font = `bold 11.5px ${FONT}`;
-      ctx.fillText('✓ 適正操業ウィンドウ', mapX + mapW * 0.16, mapY + mapH * 0.46);
+      ctx.font = `bold ${compact ? 10 : 11.5}px ${FONT}`;
+      ctx.fillText('✓ 適正操業域', mapX + mapW * 0.14, mapY + mapH * 0.48);
       ctx.fillStyle = '#fecdd3';
-      ctx.fillText('⚠ 湯面巻き込み域', mapX + mapW * 0.58, mapY + 22);
-      ctx.fillText('⚠ 深部持ち込み域', mapX + 10, mapY + mapH - 12);
+      ctx.fillText('⚠ 湯面巻き込み', mapX + mapW * 0.44, mapY + 18);
+      ctx.fillText('⚠ 深部持ち込み', mapX + 8, mapY + mapH - 10);
 
-      // Current Operating Point Crosshair
       const px = mapX + ((ang - (-40)) / 95) * mapW;
       const py = mapY + ((dep - 50) / 140) * mapH;
-      const pulseR = 8 + Math.sin(t * 6) * 2.5;
+      const pulseR = 7 + Math.sin(t * 6) * 2;
 
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
@@ -2590,64 +2790,63 @@
 
       ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
-      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Axis labels
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText('ノズル吐出角度 (-40° 〜 +55°)', mapX + mapW * 0.28, mapY + mapH + 22);
+      ctx.font = `${compact ? 10 : 11}px ${FONT}`;
+      ctx.fillText('吐出角度 (-40°〜+55°)', mapX + 10, mapY + mapH + 17);
 
-      // Right Panel: 3 Risk Bars
-      const rx = mapX + mapW + 22, ry = mapY, rw = w - rx - 18, rh = mapH;
+      const rx = mapX + mapW + (compact ? 12 : 20);
+      const ry = mapY;
+      const rw = w - rx - (compact ? 12 : 16);
+      const rh = mapH;
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#24324d';
       ctx.fillRect(rx, ry, rw, rh);
       ctx.strokeRect(rx, ry, rw, rh);
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = `bold 12.5px ${FONT}`;
-      ctx.fillText('現在条件の3大リスク評価', rx + 12, ry + 24);
+      ctx.font = `bold ${compact ? 10.5 : 12.5}px ${FONT}`;
+      ctx.fillText(compact ? '3大リスク評価' : '現在条件の3大リスク評価', rx + 8, ry + 20);
 
       const riskMeniscus = Math.min(100, Math.round(Math.max(0, ((ang + 10) / 45) * (115 / dep) * vcFactor) * 100));
       const riskDeep = Math.min(100, Math.round(Math.max(0, ((-ang + 5) / 45) * (dep / 120) * Math.sqrt(vcFactor)) * 100));
       const riskRemelt = Math.min(100, Math.round(Math.max(0, (vcFactor - 0.65) * 75)));
 
       const bars = [
-        { name: '① メニスカスKH巻き込み', val: riskMeniscus, desc: '湯面流速 > 0.28 m/s リスク' },
-        { name: '② 微細気泡の深部持ち込み', val: riskDeep, desc: '下降流による浮上阻害リスク' },
-        { name: '③ 凝固シェル再溶解・薄肉化', val: riskRemelt, desc: '高速鋳造時の対流熱負荷リスク' }
+        { name: compact ? '① 湯面KH巻き込み' : '① メニスカスKH巻き込み', val: riskMeniscus, desc: compact ? '湯面流速超過' : '湯面流速 > 0.28 m/s リスク' },
+        { name: compact ? '② 深部持ち込み' : '② 微細気泡の深部持ち込み', val: riskDeep, desc: compact ? '下降流による阻害' : '下降流による浮上阻害リスク' },
+        { name: compact ? '③ シェル再溶解' : '③ 凝固シェル再溶解・薄肉化', val: riskRemelt, desc: compact ? '高速時の熱負荷' : '高速鋳造時の対流熱負荷リスク' }
       ];
 
       bars.forEach((b, idx) => {
-        const by = ry + 56 + idx * ((rh - 70) / 3);
+        const by = ry + (compact ? 42 : 52) + idx * ((rh - (compact ? 46 : 62)) / 3);
         const col = b.val > 65 ? '#fb7185' : (b.val > 38 ? '#fbbf24' : '#10b981');
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = `bold 11.5px ${FONT}`;
-        ctx.fillText(b.name, rx + 12, by);
+        ctx.font = `bold ${compact ? 10 : 11.5}px ${FONT}`;
+        ctx.fillText(b.name, rx + 8, by);
 
         ctx.fillStyle = col;
-        ctx.font = `bold 12px ${MONO}`;
+        ctx.font = `bold ${compact ? 10.5 : 12}px ${MONO}`;
         ctx.textAlign = 'right';
-        ctx.fillText(`${b.val} %`, rx + rw - 12, by);
+        ctx.fillText(`${b.val}%`, rx + rw - 8, by);
         ctx.textAlign = 'left';
 
-        // Bar bg
         ctx.fillStyle = '#1e293b';
-        ctx.fillRect(rx + 12, by + 7, rw - 24, 12);
+        ctx.fillRect(rx + 8, by + 5, rw - 16, 10);
         ctx.fillStyle = col;
-        ctx.fillRect(rx + 12, by + 7, ((rw - 24) * b.val) / 100, 12);
+        ctx.fillRect(rx + 8, by + 5, ((rw - 16) * b.val) / 100, 10);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = `10.5px ${FONT}`;
-        ctx.fillText(b.desc, rx + 12, by + 32);
+        ctx.font = `${compact ? 9 : 10.5}px ${FONT}`;
+        ctx.fillText(b.desc, rx + 8, by + 27);
       });
     };
   })();
 
   const animators = [anim1, anim2, anim3, anim4, anim5, anim6, anim7, anim8, anim9];
 
-  // Main Animation Loop (only renders active slide for silky 60fps performance)
   function loop(nowMs) {
     const t = nowMs * 0.001;
     if (animators[currentSlide]) {
