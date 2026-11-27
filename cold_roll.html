@@ -1,0 +1,3126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>銅の冷間圧延 解説アニメーション（Animated SVG スケッチ版）</title>
+  <style>
+    /* =========================================================================
+       全体レイアウト（100vh 1画面完結・製図デスク風テーマ）
+       外部ライブラリ・外部フォント不使用、完全オフライン動作
+       ========================================================================= */
+    :root {
+      --desk-bg: #e4dcd0;
+      --paper-bg: #f7f3e8;
+      --panel-bg: #f9f5ec;
+      --panel-border: #bfb29e;
+      --ink-main: #272420;
+      --ink-sub: #5c5347;
+      --copper: #c25e32;
+      --copper-dark: #94411e;
+      --copper-soft: #f3e0d3;
+      --navy: #224b70;
+      --navy-dark: #183652;
+      --radius-sm: 7px;
+      --radius-md: 11px;
+      --font-sans: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'BIZ UDゴシック', 'Yu Gothic', 'Hiragino Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      color: var(--ink-main);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 253, 248, 0.7), transparent 52%),
+        linear-gradient(160deg, #e7dfd2 0%, #d8cebe 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-container {
+      width: 100%;
+      height: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    /* =========================================================================
+       メイン SVG ビューポート（画面の大部分を占有・自由ズーム＆パン対応）
+       ========================================================================= */
+    .viewport-wrap {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      background: var(--paper-bg);
+      border: 2px solid #443e37;
+      border-radius: var(--radius-md);
+      box-shadow:
+        0 8px 24px rgba(42, 35, 25, 0.16),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #mainSvg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #mainSvg.dragging {
+      cursor: grabbing;
+    }
+
+    /* 左上：タイトル＆現在チャプターHUD */
+    .hud-title {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      background: rgba(252, 248, 240, 0.92);
+      border: 1.5px solid #4d453b;
+      border-left: 5px solid var(--copper);
+      border-radius: 8px;
+      padding: 6px 12px;
+      pointer-events: none;
+      box-shadow: 0 3px 10px rgba(42, 35, 25, 0.10);
+      max-width: min(410px, 52vw);
+    }
+
+    .hud-title h1 {
+      font-size: clamp(13px, 1.35vw, 17px);
+      font-weight: 700;
+      color: var(--ink-main);
+      line-height: 1.25;
+      letter-spacing: 0.02em;
+    }
+
+    .hud-title .hud-chapter {
+      font-size: clamp(10.5px, 0.95vw, 12px);
+      font-weight: 700;
+      color: var(--copper-dark);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 右上：リアルタイム諸元メモ＆ズーム操作バッジ */
+    .hud-right-stack {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .zoom-hud {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(252, 248, 240, 0.94);
+      border: 1.5px solid #5c5347;
+      border-radius: 999px;
+      padding: 3px 6px 3px 10px;
+      box-shadow: 0 2px 8px rgba(42, 35, 25, 0.12);
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .zoom-readout {
+      font-variant-numeric: tabular-nums;
+      color: var(--navy);
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .mini-btn {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-main);
+      background: #fffdf8;
+      border: 1px solid #7c7162;
+      border-radius: 999px;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    .mini-btn:hover {
+      background: #efe5d5;
+    }
+
+    .spec-notepad {
+      background: rgba(254, 250, 242, 0.93);
+      border: 1.5px solid #595045;
+      border-radius: 8px;
+      padding: 7px 10px;
+      width: 224px;
+      box-shadow: 0 3px 10px rgba(42, 35, 25, 0.11);
+      font-size: 11px;
+    }
+
+    .spec-notepad-head {
+      font-weight: 700;
+      color: var(--navy);
+      border-bottom: 1px dashed #b9ac99;
+      padding-bottom: 3px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      line-height: 1.55;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .spec-row span:first-child {
+      color: var(--ink-sub);
+    }
+
+    .spec-row strong {
+      color: var(--ink-main);
+    }
+
+    .spec-row strong.accent {
+      color: #ad3426;
+    }
+
+    .coil-bar-wrap {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--ink-sub);
+    }
+
+    .coil-bar-track {
+      flex: 1;
+      height: 7px;
+      background: #e7dfd0;
+      border: 1px solid #8a7e6d;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .coil-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #b55328, #dc8552);
+      width: 85%;
+    }
+
+    /* 左下：ロールバイト拡大図（独立ベクターSVGインセット） */
+    .inset-card {
+      position: absolute;
+      left: 12px;
+      bottom: 66px;
+      width: clamp(230px, 24vw, 310px);
+      background: rgba(252, 248, 240, 0.96);
+      border: 1.8px solid #3f3932;
+      border-radius: 10px;
+      box-shadow: 0 5px 16px rgba(35, 28, 20, 0.20);
+      overflow: hidden;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: auto;
+    }
+
+    .inset-card.hidden {
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+      pointer-events: none;
+    }
+
+    .inset-header {
+      background: #ebe3d3;
+      border-bottom: 1px solid #8c8070;
+      padding: 4px 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-main);
+    }
+
+    #insetSvg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 310 / 168;
+      background: #faf6ed;
+    }
+
+    /* ステージ内下部：解説字幕バー（非表示可能） */
+    .subtitle-overlay {
+      position: absolute;
+      left: 50%;
+      bottom: 10px;
+      transform: translateX(-50%);
+      width: min(94%, 1020px);
+      background: rgba(33, 29, 25, 0.89);
+      border: 1.5px solid #c9bba6;
+      border-radius: 10px;
+      padding: 7px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fdf8ef;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .subtitle-overlay.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+
+    .sub-badge {
+      flex-shrink: 0;
+      background: var(--copper);
+      color: #fffaf3;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    .sub-lines {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.42;
+    }
+
+    .sub-line1 {
+      font-size: clamp(11.5px, 1.15vw, 14px);
+      font-weight: 700;
+      color: #fffcf6;
+    }
+
+    .sub-line2 {
+      font-size: clamp(10.5px, 1.0vw, 12.5px);
+      color: #f0dcc0;
+    }
+
+    /* =========================================================================
+       下部コントロールデッキ（動画プレイヤー風＋圧延機・透過・圧下率操作）
+       ========================================================================= */
+    .control-deck {
+      flex: 0 0 auto;
+      background: var(--panel-bg);
+      border: 1.5px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      padding: 8px 11px;
+      box-shadow: 0 3px 12px rgba(42, 35, 25, 0.09);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .deck-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .deck-row.second {
+      padding-top: 6px;
+      border-top: 1px dashed #c8bcaa;
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink-main);
+      background: #fffdf9;
+      border: 1.5px solid #6d6356;
+      border-radius: var(--radius-sm);
+      padding: 5px 10px;
+      min-height: 31px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 1.5px 0 rgba(58, 50, 40, 0.18);
+      transition: background 0.12s ease, transform 0.08s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover { background: #f3eadc; }
+    .btn:active { transform: translateY(1px); }
+
+    .btn-primary {
+      background: var(--copper);
+      border-color: var(--copper-dark);
+      color: #fffcf7;
+    }
+    .btn-primary:hover { background: #b15229; }
+
+    .btn-toggle.active {
+      background: var(--navy);
+      border-color: var(--navy-dark);
+      color: #f8fbff;
+    }
+    .btn-toggle.active:hover { background: #1c3f5e; }
+
+    .btn-auto {
+      display: none;
+      background: #fff3dd;
+      border-color: #b77b24;
+      color: #794d0c;
+      font-size: 11.5px;
+    }
+    .btn-auto.visible { display: inline-flex; }
+
+    .speed-select {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink-main);
+      background: #fffdf9;
+      border: 1.5px solid #6d6356;
+      border-radius: var(--radius-sm);
+      padding: 4px 7px;
+      min-height: 31px;
+      cursor: pointer;
+    }
+
+    /* タイムライン＋チャプターボタン */
+    .timeline-box {
+      flex: 1 1 280px;
+      min-width: 210px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .seek-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .range-input {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: #ddd4c4;
+      border: 1px solid #9d907d;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .range-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--copper);
+      border: 2px solid #fffdf9;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+    }
+
+    .range-input::-moz-range-thumb {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--copper);
+      border: 2px solid #fffdf9;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+    }
+
+    .range-input.navy::-webkit-slider-thumb { background: var(--navy); }
+    .range-input.navy::-moz-range-thumb { background: var(--navy); }
+
+    #seekBar { width: 100%; }
+
+    .time-label {
+      font-variant-numeric: tabular-nums;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink-sub);
+      min-width: 78px;
+      text-align: right;
+    }
+
+    .chapter-bar {
+      display: flex;
+      gap: 4px;
+    }
+
+    .chap-btn {
+      flex: 1 1 0;
+      font-family: var(--font-sans);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2.5px 5px;
+      border-radius: 5px;
+      border: 1px solid #c7baaa;
+      background: #f2eadc;
+      color: var(--ink-sub);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.12s ease;
+    }
+
+    .chap-btn:hover { background: #e8ddca; color: var(--ink-main); }
+    .chap-btn.active {
+      background: var(--copper-soft);
+      border-color: var(--copper);
+      color: var(--copper-dark);
+    }
+
+    /* セグメントスイッチ & スライダー枠 */
+    .segmented {
+      display: inline-flex;
+      background: #e6ddce;
+      border: 1.5px solid #6d6356;
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 9px;
+      min-height: 27px;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--ink-sub);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .seg-btn.active {
+      background: var(--copper);
+      color: #fffdf9;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+    }
+
+    .slider-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #efe7d9;
+      border: 1px solid #cabca8;
+      border-radius: var(--radius-sm);
+      padding: 2px 8px 2px 4px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink-sub);
+    }
+
+    .slider-pill .val {
+      font-variant-numeric: tabular-nums;
+      color: var(--navy);
+      min-width: 34px;
+      text-align: right;
+    }
+
+    .slider-pill .val.red {
+      color: #ad3426;
+    }
+
+    /* トースト（alert代替） */
+    .toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-14px);
+      background: rgba(34, 30, 26, 0.94);
+      color: #fcf6ec;
+      border: 1px solid #8f806c;
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.26);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* 小画面での自動調整 */
+    @media (max-width: 900px) {
+      .spec-notepad { display: none; }
+      .inset-card { width: 210px; bottom: 58px; }
+      .chap-btn { font-size: 9.5px; }
+      .btn { font-size: 11px; padding: 4px 7px; min-height: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- =======================================================================
+         メイン SVG ビューポート（完全ベクター・60fps アニメーション）
+         ======================================================================= -->
+    <div class="viewport-wrap" id="viewportWrap">
+      <svg id="mainSvg" viewBox="0 0 1280 680" preserveAspectRatio="xMidYMid meet"
+           xmlns="http://www.w3.org/2000/svg" role="img" aria-label="銅の冷間圧延プロセス Animated SVG 図解">
+        <defs>
+          <!-- 1) 背景専用：軽量な紙目テクスチャフィルタ（アニメーション要素には非適用） -->
+          <filter id="paperGrainFilter" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="7" result="noise"/>
+            <feColorMatrix type="matrix"
+              values="0 0 0 0 0.45
+                      0 0 0 0 0.39
+                      0 0 0 0 0.30
+                      0 0 0 0.045 0" in="noise" result="grain"/>
+            <feComposite in="grain" in2="SourceGraphic" operator="over"/>
+          </filter>
+
+          <!-- 2) 静的装飾・注釈枠向けの極めて軽い手描き揺らぎフィルタ（文字・ロールには非適用） -->
+          <filter id="sketchSoft" x="-3%" y="-3%" width="106%" height="106%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="11" result="t"/>
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+
+          <!-- 3) 製図方眼パターン（20px細線 & 100px主線） -->
+          <pattern id="gridPattern" width="100" height="100" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 V 100 M 40 0 V 100 M 60 0 V 100 M 80 0 V 100
+                     M 0 20 H 100 M 0 40 H 100 M 0 60 H 100 M 0 80 H 100"
+                  stroke="#9c907b" stroke-width="0.45" stroke-opacity="0.16" fill="none"/>
+            <path d="M 100 0 V 100 M 0 100 H 100"
+                  stroke="#8b7f6b" stroke-width="0.8" stroke-opacity="0.24" fill="none"/>
+          </pattern>
+
+          <!-- 4) 鋼材・ハウジング用ベクター斜線ハッチングパターン -->
+          <pattern id="hatchSteel" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-42)">
+            <line x1="0" y1="0" x2="0" y2="9" stroke="#3c3a35" stroke-width="0.9" stroke-opacity="0.26"/>
+          </pattern>
+
+          <pattern id="hatchCastIron" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="#2f2d28" stroke-width="1.05" stroke-opacity="0.30"/>
+            <line x1="4" y1="0" x2="4" y2="8" stroke="#2f2d28" stroke-width="0.55" stroke-opacity="0.18"/>
+          </pattern>
+
+          <pattern id="hatchFloor" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-52)">
+            <line x1="0" y1="0" x2="0" y2="12" stroke="#4d453b" stroke-width="1.05" stroke-opacity="0.32"/>
+          </pattern>
+
+          <pattern id="hatchHydraulic" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(42)">
+            <line x1="0" y1="0" x2="0" y2="7" stroke="#614e36" stroke-width="0.85" stroke-opacity="0.26"/>
+          </pattern>
+
+          <!-- 5) 水彩・鉛筆風 SVG グラデーション -->
+          <radialGradient id="paperVignette" cx="48%" cy="44%" r="68%">
+            <stop offset="0%" stop-color="#fffdf8" stop-opacity="0.55"/>
+            <stop offset="72%" stop-color="#f7f3e8" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#d2c4ab" stop-opacity="0.34"/>
+          </radialGradient>
+
+          <!-- 銅コイル（水彩赤銅色） -->
+          <radialGradient id="copperCoilGrad" cx="35%" cy="32%" r="72%">
+            <stop offset="0%" stop-color="#f7d5b7"/>
+            <stop offset="32%" stop-color="#e29463"/>
+            <stop offset="72%" stop-color="#c6663a"/>
+            <stop offset="100%" stop-color="#96421d"/>
+          </radialGradient>
+
+          <!-- 銅条（入側：赤銅色） -->
+          <linearGradient id="copperEntryGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8f3d1a"/>
+            <stop offset="28%" stop-color="#e59a69"/>
+            <stop offset="65%" stop-color="#c7663a"/>
+            <stop offset="100%" stop-color="#873817"/>
+          </linearGradient>
+
+          <!-- 銅条（出側：加工光沢の明るい銅色） -->
+          <linearGradient id="copperExitGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#99421d"/>
+            <stop offset="30%" stop-color="#f9dbc0"/>
+            <stop offset="62%" stop-color="#df8c59"/>
+            <stop offset="100%" stop-color="#933f1b"/>
+          </linearGradient>
+
+          <!-- 圧延ロール（青灰色・鉛筆調） -->
+          <linearGradient id="rollSteelGrad" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+            <stop offset="0%" stop-color="#eff6fb"/>
+            <stop offset="44%" stop-color="#b6cadb"/>
+            <stop offset="100%" stop-color="#6e869c"/>
+          </linearGradient>
+
+          <!-- ワークロール（より明るい鏡面仕上げ） -->
+          <linearGradient id="rollWorkGrad" x1="0.1" y1="0.08" x2="0.88" y2="0.92">
+            <stop offset="0%" stop-color="#f7fbff"/>
+            <stop offset="42%" stop-color="#c3d7e8"/>
+            <stop offset="100%" stop-color="#7691a8"/>
+          </linearGradient>
+
+          <!-- バックアップベアリング外輪（鋼鉄グレー） -->
+          <linearGradient id="rollBearingGrad" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+            <stop offset="0%" stop-color="#f0ede6"/>
+            <stop offset="50%" stop-color="#c2c9cf"/>
+            <stop offset="100%" stop-color="#7e8b96"/>
+          </linearGradient>
+
+          <!-- ハウジング本体（鉛筆グレー） -->
+          <linearGradient id="housingGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#e0dcd4"/>
+            <stop offset="55%" stop-color="#ccc8bf"/>
+            <stop offset="100%" stop-color="#b4afa5"/>
+          </linearGradient>
+
+          <!-- クーラントスプレー（淡い水色） -->
+          <linearGradient id="coolantConeL" x1="0" y1="0.5" x2="1" y2="0.5">
+            <stop offset="0%" stop-color="#4fb3d4" stop-opacity="0.62"/>
+            <stop offset="100%" stop-color="#9ad8ec" stop-opacity="0.08"/>
+          </linearGradient>
+          <linearGradient id="coolantConeR" x1="1" y1="0.5" x2="0" y2="0.5">
+            <stop offset="0%" stop-color="#4fb3d4" stop-opacity="0.62"/>
+            <stop offset="100%" stop-color="#9ad8ec" stop-opacity="0.08"/>
+          </linearGradient>
+
+          <!-- ベクター矢印マーカー -->
+          <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#b03326"/>
+          </marker>
+          <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#224b70"/>
+          </marker>
+          <marker id="arrowCopper" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#9a431e"/>
+          </marker>
+        </defs>
+
+        <!-- レイヤー1：生成り紙＋微細紙目＋製図方眼（静的背景） -->
+        <g id="layerPaper">
+          <rect x="-400" y="-300" width="2080" height="1280" fill="#f7f3e8"/>
+          <rect x="0" y="0" width="1280" height="680" fill="#f7f3e8" filter="url(#paperGrainFilter)"/>
+          <rect x="0" y="0" width="1280" height="680" fill="url(#paperVignette)"/>
+          <rect x="14" y="14" width="1252" height="652" fill="url(#gridPattern)"/>
+          <!-- 製図用紙二重枠（軽い手描きフィルタ） -->
+          <g filter="url(#sketchSoft)">
+            <rect x="12" y="12" width="1256" height="656" fill="none" stroke="#534a3f" stroke-width="1.5" stroke-opacity="0.65"/>
+            <rect x="16" y="16" width="1248" height="648" fill="none" stroke="#534a3f" stroke-width="0.7" stroke-opacity="0.35"/>
+          </g>
+        </g>
+
+        <!-- レイヤー2：床面・基礎コンクリート -->
+        <g id="layerFloor">
+          <rect x="28" y="542" width="1224" height="16" fill="url(#hatchFloor)"/>
+          <line x1="28" y1="542" x2="1252" y2="542" stroke="#272420" stroke-width="2.1" stroke-linecap="round"/>
+          <line x1="28" y1="543.2" x2="1252" y2="542.6" stroke="#272420" stroke-width="0.75" stroke-opacity="0.45"/>
+        </g>
+
+        <!-- レイヤー3：入側・出側ライン機器（スタンド、板厚計、デフレクター、張力矢印） -->
+        <g id="layerLineEquipment"></g>
+
+        <!-- レイヤー4：銅条ストリップ＆体積一定速度マーカー -->
+        <g id="layerCopperStrip"></g>
+
+        <!-- レイヤー5：ペイオフリール（スナバーロール含む）＆テンションリール -->
+        <g id="layerReels"></g>
+
+        <!-- レイヤー6：中央圧延機（6段UCミル / 20段ゼンジミアミル切替） -->
+        <g id="layerMillStand">
+          <g id="mill6HiGroup"></g>
+          <g id="mill20HiGroup" display="none"></g>
+        </g>
+
+        <!-- レイヤー7：手描き引出線注釈（圧延機・透過状態に応じ動的切替） -->
+        <g id="layerAnnotations"></g>
+      </svg>
+
+      <!-- 左上 HUD：タイトル・チャプター -->
+      <div class="hud-title">
+        <h1>銅の冷間圧延プロセス解説（Animated SVG）</h1>
+        <div class="hud-chapter" id="hudChapterText">第1章：巻出しと後方張力</div>
+      </div>
+
+      <!-- 右上 HUD：ズーム操作 & リアルタイム諸元メモ -->
+      <div class="hud-right-stack">
+        <div class="zoom-hud" title="ホイールで拡大縮小・ドラッグでパン移動">
+          <span>🔍</span>
+          <span class="zoom-readout" id="zoomReadout">1.0×</span>
+          <button class="mini-btn" id="btnZoomOut" type="button" title="縮小">－</button>
+          <button class="mini-btn" id="btnZoomIn" type="button" title="拡大">＋</button>
+          <button class="mini-btn" id="btnResetView" type="button" title="全体表示へ戻す">視点リセット</button>
+        </div>
+
+        <div class="spec-notepad" aria-label="リアルタイム圧延諸元">
+          <div class="spec-notepad-head">
+            <span>📋 リアルタイム圧延諸元</span>
+            <span id="specMillShort" style="color: var(--copper-dark);">6段UC</span>
+          </div>
+          <div class="spec-row"><span>入側板厚 t₀</span><strong id="specT0">2.00 mm</strong></div>
+          <div class="spec-row"><span>出側板厚 t₁</span><strong class="accent" id="specT1">0.80 mm</strong></div>
+          <div class="spec-row"><span>圧下率 r</span><strong id="specRed">60.0 %</strong></div>
+          <div class="spec-row"><span>速度比 v₁ / v₀</span><strong class="accent" id="specRatio">2.50 ×</strong></div>
+          <div class="coil-bar-wrap">
+            <span id="specCoilText">巻出残 86%</span>
+            <div class="coil-bar-track"><div class="coil-bar-fill" id="specCoilFill"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 左下：ロールバイト拡大図（独立ベクターSVGインセット） -->
+      <div class="inset-card" id="insetCard">
+        <div class="inset-header">
+          <span id="insetTitle">🔍 ロールバイト微視変形（結晶粒延伸・中立点）</span>
+          <span id="insetWRBadge" style="color: var(--copper-dark);">6段WR</span>
+        </div>
+        <svg id="insetSvg" viewBox="0 0 310 168" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="insetCopperGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#96401c"/>
+              <stop offset="30%" stop-color="#f2c49e"/>
+              <stop offset="68%" stop-color="#cc6c3e"/>
+              <stop offset="100%" stop-color="#8d3b18"/>
+            </linearGradient>
+            <linearGradient id="insetRollGrad" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+              <stop offset="0%" stop-color="#f2f8fc"/>
+              <stop offset="48%" stop-color="#b9cde0"/>
+              <stop offset="100%" stop-color="#7089a0"/>
+            </linearGradient>
+            <clipPath id="insetStripClip">
+              <path id="insetStripClipPath" d="M 0 60 L 310 60 L 310 108 L 0 108 Z"/>
+            </clipPath>
+            <marker id="insetArrF" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 1 1 L 7 4 L 1 7 z" fill="#b03326"/>
+            </marker>
+            <marker id="insetArrB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 1 1 L 7 4 L 1 7 z" fill="#224b70"/>
+            </marker>
+          </defs>
+          <!-- 薄い方眼背景 -->
+          <rect x="0" y="0" width="310" height="168" fill="#faf6ed"/>
+          <path d="M0 42 H310 M0 84 H310 M0 126 H310 M77 0 V168 M155 0 V168 M232 0 V168"
+                stroke="#b7aa94" stroke-width="0.5" stroke-opacity="0.32"/>
+
+          <!-- クーラント潤滑くさび -->
+          <g id="insetCoolantWedge" opacity="0.55">
+            <path id="insetCoolantTop" fill="#6cc3de"/>
+            <path id="insetCoolantBot" fill="#6cc3de"/>
+          </g>
+
+          <!-- 銅条本体（変形プロファイル） -->
+          <path id="insetStripShape" fill="url(#insetCopperGrad)" stroke="#272420" stroke-width="1.4"/>
+
+          <!-- 銅内部の結晶粒アニメーション（等軸粒→扁平・繊維組織化＝加工硬化） -->
+          <g id="insetGrainsGroup" clip-path="url(#insetStripClip)"></g>
+
+          <!-- 上下ワークロール（径差を正確に表現） -->
+          <g id="insetTopRoll"></g>
+          <g id="insetBotRoll"></g>
+
+          <!-- 中立点（Neutral Point）＆摩擦方向インジケーター -->
+          <g id="insetPhysicsOverlay">
+            <line id="insetNeutralLine" x1="158" y1="18" x2="158" y2="150"
+                  stroke="#b03326" stroke-width="1.2" stroke-dasharray="3.5,2.5"/>
+            <circle id="insetNeutralDotTop" cx="158" cy="70" r="2.8" fill="#b03326"/>
+            <circle id="insetNeutralDotBot" cx="158" cy="98" r="2.8" fill="#b03326"/>
+            <rect x="122" y="4" width="76" height="15" rx="3" fill="rgba(252,248,240,0.92)" stroke="#b03326" stroke-width="0.9"/>
+            <text x="160" y="14.5" text-anchor="middle" font-size="9.2" font-weight="700" fill="#b03326">中立点 (v = v_R)</text>
+
+            <!-- 後方すべり（摩擦は前向き→） / 前方すべり（摩擦は後向き←） -->
+            <line id="insetFricBack" x1="108" y1="62" x2="144" y2="62" stroke="#224b70" stroke-width="1.5" marker-end="url(#insetArrB)"/>
+            <text x="104" y="55" text-anchor="end" font-size="8.5" font-weight="700" fill="#224b70">後方すべり(摩擦→)</text>
+
+            <line id="insetFricFwd" x1="196" y1="62" x2="167" y2="62" stroke="#b03326" stroke-width="1.5" marker-end="url(#insetArrF)"/>
+            <text x="200" y="55" text-anchor="start" font-size="8.5" font-weight="700" fill="#b03326">(←摩擦)前方すべり</text>
+
+            <!-- 入口・出口ラベル -->
+            <text id="insetLabelIn" x="8" y="20" font-size="9.5" font-weight="700" fill="#272420">等軸結晶粒 (t₀)</text>
+            <text id="insetLabelOut" x="302" y="20" text-anchor="end" font-size="9.5" font-weight="700" fill="#b03326">繊維組織・加工硬化 (t₁)</text>
+
+            <!-- 下部解説帯 -->
+            <rect x="6" y="146" width="298" height="17" rx="4" fill="rgba(245,238,225,0.92)" stroke="#a39682" stroke-width="0.8"/>
+            <text id="insetCaption" x="155" y="158" text-anchor="middle" font-size="9.2" font-weight="700" fill="#474037">
+              圧延方向へ結晶粒が延伸し高強度化（v₀·t₀ = v₁·t₁）
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 下部オーバーレイ：解説字幕バー -->
+      <div class="subtitle-overlay" id="subtitleBar">
+        <div class="sub-badge" id="subBadge">CH 1 / 5</div>
+        <div class="sub-lines">
+          <div class="sub-line1" id="subLine1"></div>
+          <div class="sub-line2" id="subLine2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         下部コントロールバー（動画プレイヤー + 圧延機 + 透過 + 注釈 + 圧下率）
+         ======================================================================= -->
+    <div class="control-deck" role="region" aria-label="動画再生および圧延機操作コントロール">
+      <!-- 1行目：再生・タイムライン・チャプター・速度 -->
+      <div class="deck-row">
+        <div class="group">
+          <button class="btn btn-primary" id="btnPlayPause" type="button" title="再生 / 一時停止 (Space)">
+            <span id="playIcon">⏸</span><span id="playText">一時停止</span>
+          </button>
+          <button class="btn" id="btnRestart" type="button" title="最初から自動解説を再生">⏮ 最初</button>
+          <select class="speed-select" id="speedSelect" aria-label="再生速度">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1.0×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2.0×</option>
+          </select>
+        </div>
+
+        <div class="timeline-box">
+          <div class="seek-line">
+            <input type="range" id="seekBar" class="range-input" min="0" max="60" step="0.05" value="0" aria-label="タイムライン">
+            <span class="time-label" id="timeLabel">00:00 / 01:00</span>
+          </div>
+          <div class="chapter-bar" id="chapterBar"></div>
+        </div>
+      </div>
+
+      <!-- 2行目：圧延機切替・内部透過・圧下率・注釈・拡大図・字幕 -->
+      <div class="deck-row second">
+        <div class="group">
+          <div class="segmented" role="group" aria-label="圧延機切替">
+            <button class="seg-btn active" id="btnMill6" type="button">6段 UCミル</button>
+            <button class="seg-btn" id="btnMill20" type="button">20段 圧延機</button>
+          </div>
+
+          <div class="slider-pill" title="外装ハウジングの透過度（0%〜100%）">
+            <button class="btn btn-toggle" id="btnXray" type="button" style="min-height: 25px; padding: 2px 8px; font-size: 11px;">
+              内部透過 OFF
+            </button>
+            <input type="range" id="xraySlider" class="range-input navy" min="0" max="100" value="0" style="width: 78px;" aria-label="透過度">
+            <span class="val" id="xrayVal">0%</span>
+          </div>
+
+          <div class="slider-pill" title="手動で圧下率を変更（体積一定則により板厚と速度比がリアルタイム変化）">
+            <span style="padding-left: 4px;">圧下率</span>
+            <input type="range" id="redSlider" class="range-input" min="20" max="75" value="60" style="width: 76px;" aria-label="圧下率">
+            <span class="val red" id="redVal">60%</span>
+          </div>
+        </div>
+
+        <div class="group">
+          <button class="btn btn-toggle active" id="btnAnno" type="button">注釈 ON</button>
+          <button class="btn btn-toggle active" id="btnInset" type="button">拡大図 ON</button>
+          <button class="btn btn-toggle active" id="btnSubs" type="button">字幕 ON</button>
+          <button class="btn btn-auto" id="btnAutoSync" type="button" title="手動操作を解除し自動ストーリーカメラ・演出へ同期">
+            ↻ 自動演出に戻す
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通知トースト -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* =======================================================================
+         1. SVG 名前空間ヘルパー & 手描き二重輪郭ベクター生成器
+         ======================================================================= */
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+
+      function svgEl(tag, attrs = {}, parent = null) {
+        const el = document.createElementNS(SVG_NS, tag);
+        for (const [k, v] of Object.entries(attrs)) {
+          if (v !== null && v !== undefined) el.setAttribute(k, String(v));
+        }
+        if (parent) parent.appendChild(el);
+        return el;
+      }
+
+      // 決定論的ハッシュ乱数（-1..1）で安定した手描き揺らぎを生成
+      function hash1(seed) {
+        let x = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
+        x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
+        return (((x ^ (x >>> 16)) >>> 0) / 4294967295) * 2 - 1;
+      }
+
+      // 手描き風ポリラインのパス文字列生成（ベクターのままズームしても完全にシャープ）
+      function sketchLinePath(x1, y1, x2, y2, seed = 1, rough = 0.75) {
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        if (dist < 1) return `M ${x1} ${y1} L ${x2} ${y2}`;
+        const segs = Math.max(2, Math.min(12, Math.ceil(dist / 34)));
+        const nx = -(y2 - y1) / dist;
+        const ny = (x2 - x1) / dist;
+        let d = `M ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+        for (let i = 1; i <= segs; i++) {
+          const t = i / segs;
+          const edge = i === segs ? 0.25 : 1.0;
+          const j = hash1(seed * 97 + i * 31) * rough * edge;
+          const px = x1 + (x2 - x1) * t + nx * j;
+          const py = y1 + (y2 - y1) * t + ny * j;
+          d += ` L ${px.toFixed(2)} ${py.toFixed(2)}`;
+        }
+        return d;
+      }
+
+      // インクペン風・二重輪郭の矩形を追加
+      function addSketchRect(parent, x, y, w, h, opts = {}) {
+        const {
+          fill = 'none',
+          hatch = null,
+          stroke = '#272420',
+          strokeWidth = 1.6,
+          rx = 0,
+          dash = null,
+          seed = 10,
+          double = true,
+          opacity = 1
+        } = opts;
+
+        const g = svgEl('g', opacity < 1 ? { opacity } : {}, parent);
+        if (fill !== 'none') {
+          svgEl('rect', { x, y, width: w, height: h, rx, fill }, g);
+        }
+        if (hatch) {
+          svgEl('rect', { x, y, width: w, height: h, rx, fill: hatch }, g);
+        }
+        if (stroke !== 'none' && strokeWidth > 0) {
+          const mainAttrs = {
+            x, y, width: w, height: h, rx,
+            fill: 'none', stroke, 'stroke-width': strokeWidth,
+            'stroke-linejoin': 'round'
+          };
+          if (dash) mainAttrs['stroke-dasharray'] = dash;
+          svgEl('rect', mainAttrs, g);
+
+          if (double && !dash) {
+            const dx = hash1(seed * 13) * 0.9;
+            const dy = hash1(seed * 29) * 0.9;
+            svgEl('rect', {
+              x: (x + dx).toFixed(2),
+              y: (y + dy).toFixed(2),
+              width: (w + hash1(seed * 41) * 0.7).toFixed(2),
+              height: (h + hash1(seed * 53) * 0.7).toFixed(2),
+              rx,
+              fill: 'none',
+              stroke,
+              'stroke-width': (strokeWidth * 0.55).toFixed(2),
+              'stroke-opacity': 0.34
+            }, g);
+          }
+        }
+        return g;
+      }
+
+      // インクペン風・二重輪郭の多角形
+      function addSketchPoly(parent, pts, opts = {}) {
+        const {
+          fill = 'none',
+          hatch = null,
+          stroke = '#272420',
+          strokeWidth = 1.6,
+          seed = 20,
+          double = true
+        } = opts;
+
+        const g = svgEl('g', {}, parent);
+        const ptStr = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        if (fill !== 'none') svgEl('polygon', { points: ptStr, fill }, g);
+        if (hatch) svgEl('polygon', { points: ptStr, fill: hatch }, g);
+        if (stroke !== 'none' && strokeWidth > 0) {
+          svgEl('polygon', {
+            points: ptStr, fill: 'none', stroke,
+            'stroke-width': strokeWidth, 'stroke-linejoin': 'round'
+          }, g);
+          if (double) {
+            const ptStr2 = pts.map((p, i) =>
+              `${(p.x + hash1(seed + i * 17) * 0.85).toFixed(1)},${(p.y + hash1(seed + i * 31) * 0.85).toFixed(1)}`
+            ).join(' ');
+            svgEl('polygon', {
+              points: ptStr2, fill: 'none', stroke,
+              'stroke-width': (strokeWidth * 0.55).toFixed(2),
+              'stroke-opacity': 0.32
+            }, g);
+          }
+        }
+        return g;
+      }
+
+      /* =======================================================================
+         2. ライン座標定数・圧延機諸元・5チャプター自動解説ストーリー
+         ======================================================================= */
+      const VB_FULL = { x: 0, y: 0, w: 1280, h: 680 };
+      const PASSLINE_Y = 362;
+      const FLOOR_Y = 542;
+      const MILL_CX = 640;
+
+      // リール・デフレクターロール・板厚計座標
+      const PAYOFF_C = { x: 162, y: 426 };
+      const TENSION_C = { x: 1118, y: 426 };
+      const ENTRY_DEF = { x: 318, y: PASSLINE_Y + 17, r: 17 };
+      const EXIT_DEF = { x: 962, y: PASSLINE_Y + 17, r: 17 };
+      const ENTRY_GAUGE_X = 398;
+      const EXIT_GAUGE_X = 882;
+      const SNUBBER_PIVOT = { x: 94, y: 314 };
+      const SNUBBER_R = 10.5;
+
+      const COIL_R_CORE = 27;
+      const COIL_R_MIN = 35;
+      const COIL_R_MAX = 78;
+
+      const MILL_CONFIGS = {
+        uc6: {
+          name: '6段 UCミル',
+          short: '6段UC',
+          t0: 2.00,           // 入側板厚 [mm]
+          defaultRed: 0.60,   // デフォルト圧下率 60% -> t1=0.80mm, 速度2.50倍
+          visT0: 11.2,
+          entrySpeed: 64,
+          wrBadge: '6段WR（中径）'
+        },
+        cluster20: {
+          name: '20段 圧延機',
+          short: '20段ゼンジミア',
+          t0: 0.60,           // 極薄圧延向け入側板厚 [mm]
+          defaultRed: 0.70,   // デフォルト圧下率 70% -> t1=0.18mm, 速度3.33倍
+          visT0: 8.6,
+          entrySpeed: 48,
+          wrBadge: '20段WR（極小径）'
+        }
+      };
+
+      const TOTAL_DURATION = 60;
+      const CHAPTERS = [
+        {
+          id: 1, start: 0, end: 12,
+          short: '1. 巻出し・後方張力',
+          title: '第1章：ペイオフリール巻出しと後方張力',
+          mill: 'uc6',
+          xray: 0.0,
+          red: 0.60,
+          anno: true,
+          inset: false,
+          cam: { x: 24, y: 120, w: 690, h: 366 }, // 左側〜入側へズーム
+          subs: [
+            {
+              at: 0,
+              l1: '左のペイオフリールから銅コイルを巻き出し、スナバーロールでコイルの跳ね上がりを押さえます。',
+              l2: 'リールにブレーキをかけて「後方張力」を付与し、デフレクターロール経由で銅条を水平に導きます。'
+            },
+            {
+              at: 6,
+              l1: '入側板厚計（X線）で圧延前の厚み t₀ を連続計測し、圧延機へフィードバックします。',
+              l2: '巻出しが進むにつれコイル外径は断面積保存則に従って小さくなり、回転速度が上がっていきます。'
+            }
+          ]
+        },
+        {
+          id: 2, start: 12, end: 24,
+          short: '2. 6段UCミル構造',
+          title: '第2章：6段UCミルの構造とロール剛性・形状制御',
+          mill: 'uc6',
+          xray: 0.96,
+          red: 0.60,
+          anno: true,
+          inset: false,
+          cam: { x: 356, y: 112, w: 568, h: 302 }, // 中央6段UCミルへスムーズズーム
+          subs: [
+            {
+              at: 12,
+              l1: '門型ハウジングを透過すると、上下のワーク・中間・バックアップの垂直6段ロールが現れます。',
+              l2: '上部の油圧圧下シリンダーが巨大な荷重を加え、大径バックアップロールがたわみを強固に支えます。'
+            },
+            {
+              at: 18,
+              l1: '6段UCミル最大の特徴は「中間ロール（IMR）の軸方向シフト」と「ワークロールベンダー」です。',
+              l2: '板幅に応じてロール間の接触領域を最適化し、幅広の銅条でも極めて高い平坦度を実現します。'
+            }
+          ]
+        },
+        {
+          id: 3, start: 24, end: 36,
+          short: '3. 塑性変形・体積一定',
+          title: '第3章：ロールバイトの塑性変形と体積一定則',
+          mill: 'uc6',
+          xray: 0.92,
+          red: 0.60,
+          anno: true,
+          inset: true,
+          cam: { x: 315, y: 185, w: 650, h: 345 }, // ロール間と入出側速度差にフォーカス
+          subs: [
+            {
+              at: 24,
+              l1: 'ロールに噛み込まれた銅条は常温で塑性変形し、板厚が t₀ から t₁ へ薄く押し伸ばされます。',
+              l2: '体積一定則（v₀·t₀ = v₁·t₁）により、板厚が60%減ると出側速度は2.5倍へ一気に加速します。'
+            },
+            {
+              at: 30,
+              l1: '左下の拡大図では、等軸結晶粒が圧延方向へ扁平・繊維組織化し「加工硬化」する様子が見えます。',
+              l2: 'ロールバイト内には条速とロール周速が一致する「中立点」が存在し、摩擦方向が反転します。'
+            }
+          ]
+        },
+        {
+          id: 4, start: 36, end: 48,
+          short: '4. 20段圧延機・極薄',
+          title: '第4章：20段圧延機（ゼンジミア）による極薄・高圧下圧延',
+          mill: 'cluster20',
+          xray: 0.96,
+          red: 0.70,
+          anno: true,
+          inset: true,
+          cam: { x: 356, y: 146, w: 568, h: 302 }, // 20段1-2-3-4クラスターへズーム
+          subs: [
+            {
+              at: 36,
+              l1: '20段圧延機へ切り替えます。1-2-3-4のクラスター配置で極小径ワークロールを多点支持します。',
+              l2: '一体型モノブロックハウジングと分割バックアップベアリング（A〜D軸）が超高剛性を生み出します。'
+            },
+            {
+              at: 42,
+              l1: 'ワークロール径が極めて小さいため接触弧が短くなり、ロール扁平と圧延荷重を劇的に抑えられます。',
+              l2: 'これにより硬質な銅合金や電子材料向けの極薄銅条・銅箔を高圧下率で高精度に圧延できます。'
+            }
+          ]
+        },
+        {
+          id: 5, start: 48, end: 60,
+          short: '5. 前方張力・巻取り',
+          title: '第5章：前方張力制御とテンションリール精密巻取り',
+          mill: 'cluster20',
+          xray: 0.45,
+          red: 0.70,
+          anno: true,
+          inset: false,
+          cam: { x: 0, y: 0, w: 1280, h: 680 }, // 全体俯瞰へスムーズに戻る
+          subs: [
+            {
+              at: 48,
+              l1: '圧延後の銅条は出側ワイパーで圧延油を拭き取り、出側板厚計でミクロン精度の厚みを監視します。',
+              l2: '右のテンションリールが一定の「前方張力」で引っ張りながら巻き取り、蛇行やシワを防止します。'
+            },
+            {
+              at: 54,
+              l1: '巻取り側コイルは断面積保存で大きく成長し、加工硬化による高強度と美麗な光沢肌を備えます。',
+              l2: '画面はホイールで最大6倍まで劣化なく拡大可能です。下の操作バーで自由に構造を探索できます。'
+            }
+          ]
+        }
+      ];
+
+      /* =======================================================================
+         3. 圧延機 幾何計算（6段UCミル / 20段ゼンジミア厳密外接計算）
+         ======================================================================= */
+      function compute6HiRolls() {
+        const biteHalf = 3.2;
+        const rW = 14.0;
+        const rI = 21.0;
+        const rB = 34.5;
+        const rolls = [];
+        [-1, 1].forEach((side) => {
+          const yW = PASSLINE_Y + side * (biteHalf + rW);
+          const yI = yW + side * (rW + rI);
+          const yB = yI + side * (rI + rB);
+          const dW = side < 0 ? -1 : 1; // 上WR反時計回り、下WR時計回り
+          rolls.push(
+            { id: side < 0 ? 'WR_T' : 'WR_B', role: 'WR', side, x: MILL_CX, y: yW, r: rW, dir: dW, driven: false },
+            { id: side < 0 ? 'IMR_T' : 'IMR_B', role: 'IMR', side, x: MILL_CX, y: yI, r: rI, dir: -dW, driven: true },
+            { id: side < 0 ? 'BUR_T' : 'BUR_B', role: 'BUR', side, x: MILL_CX, y: yB, r: rB, dir: dW, driven: false }
+          );
+        });
+        return { rolls, rW, rI, rB };
+      }
+
+      function compute20HiRolls() {
+        // 厳密に隣接ロールが外接し、同一段同士が干渉しない 1-2-3-4 幾何配置
+        const biteHalf = 2.4;
+        const r1 = 7.5;   // ワークロール (上下各1)
+        const r2 = 14.0;  // 第1中間ロール (上下各2)
+        const r3 = 21.5;  // 第2中間ロール (上下各3)
+        const r4 = 28.0;  // 分割バックアップベアリング軸 (上下各4: A,B,C,D / E,F,G,H)
+
+        const d12 = r1 + r2;
+        const d23 = r2 + r3;
+        const d34 = r3 + r4;
+
+        const y1 = -(biteHalf + r1);
+        const th2 = (44 * Math.PI) / 180;
+        const x2 = d12 * Math.sin(th2);
+        const y2 = y1 - d12 * Math.cos(th2);
+
+        const y3c = y2 - Math.sqrt(d23 * d23 - x2 * x2);
+        const th3 = (61 * Math.PI) / 180;
+        const x3o = x2 + d23 * Math.sin(th3);
+        const y3o = y2 - d23 * Math.cos(th3);
+
+        // 内側バックアップ(B, C)：中央(0,y3c)と外側(x3o,y3o)の両方に同時外接
+        const vx = x3o;
+        const vy = y3o - y3c;
+        const vLen = Math.hypot(vx, vy);
+        const mx = vx * 0.5;
+        const my = y3c + vy * 0.5;
+        const h = Math.sqrt(Math.max(1, d34 * d34 - (vLen * 0.5) * (vLen * 0.5)));
+        const nx = vy / vLen;
+        const ny = -vx / vLen;
+        const x4i = mx + nx * h;
+        const y4i = my + ny * h;
+
+        // 外側バックアップ(A, D)
+        const th4 = (72 * Math.PI) / 180;
+        const x4o = x3o + d34 * Math.sin(th4);
+        const y4o = y3o - d34 * Math.cos(th4);
+
+        const rolls = [];
+        [-1, 1].forEach((side) => {
+          const sy = (relY) => PASSLINE_Y + (side < 0 ? relY : -relY);
+          const d1 = side < 0 ? -1 : 1;
+          const bLabels = side < 0 ? ['A', 'B', 'C', 'D'] : ['H', 'G', 'F', 'E'];
+
+          // Tier 1 (1本)
+          rolls.push({ role: 'WR', tier: 1, side, x: MILL_CX, y: sy(y1), r: r1, dir: d1, driven: false });
+          // Tier 2 (2本)
+          rolls.push(
+            { role: 'IMR1', tier: 2, side, x: MILL_CX - x2, y: sy(y2), r: r2, dir: -d1, driven: false },
+            { role: 'IMR1', tier: 2, side, x: MILL_CX + x2, y: sy(y2), r: r2, dir: -d1, driven: false }
+          );
+          // Tier 3 (3本：外側2本が駆動軸)
+          rolls.push(
+            { role: 'IMR2', tier: 3, side, x: MILL_CX - x3o, y: sy(y3o), r: r3, dir: d1, driven: true },
+            { role: 'IMR2', tier: 3, side, x: MILL_CX, y: sy(y3c), r: r3, dir: d1, driven: false },
+            { role: 'IMR2', tier: 3, side, x: MILL_CX + x3o, y: sy(y3o), r: r3, dir: d1, driven: true }
+          );
+          // Tier 4 (4本：分割バックアップベアリング軸)
+          rolls.push(
+            { role: 'BKG', tier: 4, side, x: MILL_CX - x4o, y: sy(y4o), r: r4, dir: -d1, label: bLabels[0], eccBias: -1 },
+            { role: 'BKG', tier: 4, side, x: MILL_CX - x4i, y: sy(y4i), r: r4, dir: -d1, label: bLabels[1], eccBias: -0.4 },
+            { role: 'BKG', tier: 4, side, x: MILL_CX + x4i, y: sy(y4i), r: r4, dir: -d1, label: bLabels[2], eccBias: 0.4 },
+            { role: 'BKG', tier: 4, side, x: MILL_CX + x4o, y: sy(y4o), r: r4, dir: -d1, label: bLabels[3], eccBias: 1 }
+          );
+        });
+
+        return { rolls, r1, r2, r3, r4, cavityR: 142 };
+      }
+
+      const GEOM_6HI = compute6HiRolls();
+      const GEOM_20HI = compute20HiRolls();
+
+      // 2円の上側外共通接線
+      function upperExternalTangent(c1, r1, c2, r2) {
+        const dx = c2.x - c1.x;
+        const dy = c2.y - c1.y;
+        const dist = Math.hypot(dx, dy);
+        const base = Math.atan2(dy, dx);
+        const ratio = Math.max(-0.98, Math.min(0.98, (r1 - r2) / dist));
+        const nAng = base - Math.acos(ratio);
+        return {
+          p1: { x: c1.x + Math.cos(nAng) * r1, y: c1.y + Math.sin(nAng) * r1 },
+          p2: { x: c2.x + Math.cos(nAng) * r2, y: c2.y + Math.sin(nAng) * r2 }
+        };
+      }
+
+      /* =======================================================================
+         4. スケッチ風 SVG ロール生成（回転するグループと静止部品を分離して高速化）
+         ======================================================================= */
+      function buildSketchRollSVG(parent, roll, seedBase) {
+        const { x, y, r, role, driven, label } = roll;
+        const isBearing = role === 'BKG';
+        const wrap = svgEl('g', { transform: `translate(${x.toFixed(2)}, ${y.toFixed(2)})` }, parent);
+
+        // 1) 静止ベース（グラデーション円＋右下陰影＋光沢ハイライト＋二重インク輪郭）
+        const fillUrl = role === 'WR'
+          ? 'url(#rollWorkGrad)'
+          : (isBearing ? 'url(#rollBearingGrad)' : 'url(#rollSteelGrad)');
+
+        svgEl('circle', { cx: 0, cy: 0, r, fill: fillUrl }, wrap);
+
+        // 立体感のための右下斜線ハッチング（外周クリップ不要の三日月パス）
+        if (r >= 10) {
+          svgEl('path', {
+            d: `M ${(r * 0.65).toFixed(2)} ${(-r * 0.65).toFixed(2)} A ${r} ${r} 0 0 1 ${(-r * 0.65).toFixed(2)} ${(r * 0.65).toFixed(2)} A ${(r * 1.15).toFixed(2)} ${(r * 1.15).toFixed(2)} 0 0 0 ${(r * 0.65).toFixed(2)} ${(-r * 0.65).toFixed(2)} Z`,
+            fill: 'url(#hatchSteel)',
+            opacity: 0.72
+          }, wrap);
+        }
+
+        // 2) 回転するベクターグループ（スポーク・外周ノッチ・外輪ディテール）
+        const rotGroup = svgEl('g', {}, wrap);
+        const spokeCount = isBearing ? 8 : (r >= 24 ? 6 : (r >= 13 ? 4 : 3));
+        const rInner = isBearing ? r * 0.57 : r * 0.28;
+        const rOuter = r * 0.88;
+
+        for (let i = 0; i < spokeCount; i++) {
+          const a = (i * Math.PI * 2) / spokeCount;
+          svgEl('line', {
+            x1: (Math.cos(a) * rInner).toFixed(2),
+            y1: (Math.sin(a) * rInner).toFixed(2),
+            x2: (Math.cos(a) * rOuter).toFixed(2),
+            y2: (Math.sin(a) * rOuter).toFixed(2),
+            stroke: '#2c3742',
+            'stroke-width': r < 10 ? 0.9 : 1.15,
+            'stroke-opacity': isBearing ? 0.48 : 0.55,
+            'stroke-linecap': 'round'
+          }, rotGroup);
+        }
+
+        // 外周の基準ノッチ点（回転方向・速度比を直感的に視認可能にする）
+        svgEl('circle', {
+          cx: (r * 0.75).toFixed(2),
+          cy: 0,
+          r: r < 10 ? 1.45 : 2.15,
+          fill: '#23282e'
+        }, rotGroup);
+
+        // 分割ベアリング外輪の細線リング
+        if (isBearing) {
+          svgEl('circle', {
+            cx: 0, cy: 0, r: (r * 0.86).toFixed(2),
+            fill: 'none', stroke: '#4c5761', 'stroke-width': 0.85,
+            'stroke-dasharray': '4,3', 'stroke-opacity': 0.65
+          }, rotGroup);
+        }
+
+        // 3) 静止ハイライト＆インクペン二重輪郭
+        svgEl('path', {
+          d: `M ${(-r * 0.62).toFixed(2)} ${(-r * 0.44).toFixed(2)} A ${(r * 0.76).toFixed(2)} ${(r * 0.76).toFixed(2)} 0 0 1 ${(r * 0.24).toFixed(2)} ${(-r * 0.72).toFixed(2)}`,
+          fill: 'none', stroke: '#ffffff', 'stroke-width': r < 10 ? 1.1 : 1.9,
+          'stroke-linecap': 'round', 'stroke-opacity': 0.75
+        }, wrap);
+
+        svgEl('circle', {
+          cx: 0, cy: 0, r, fill: 'none', stroke: '#272420',
+          'stroke-width': r < 10 ? 1.35 : 1.75
+        }, wrap);
+        svgEl('circle', {
+          cx: (hash1(seedBase) * 0.55).toFixed(2),
+          cy: (hash1(seedBase + 7) * 0.55).toFixed(2),
+          r: (r + 0.35).toFixed(2),
+          fill: 'none', stroke: '#272420', 'stroke-width': 0.7, 'stroke-opacity': 0.32
+        }, wrap);
+
+        // 4) 中心軸（バックアップベアリングは静止偏心軸＋軸記号 A〜H）
+        if (isBearing) {
+          const shaftR = r * 0.54;
+          svgEl('circle', {
+            cx: 0, cy: 0, r: shaftR.toFixed(2),
+            fill: '#ebe4d8', stroke: '#272420', 'stroke-width': 1.35
+          }, wrap);
+          // 偏心リング（圧下調整用の偏心軸表現）
+          svgEl('circle', {
+            cx: 0, cy: (roll.side < 0 ? 2.2 : -2.2), r: (shaftR * 0.54).toFixed(2),
+            fill: '#97a2ac', stroke: '#272420', 'stroke-width': 1.05
+          }, wrap);
+          if (label) {
+            const txt = svgEl('text', {
+              x: 0, y: (roll.side < 0 ? -4.5 : 8.5),
+              'text-anchor': 'middle', 'font-size': 8.2, 'font-weight': 700,
+              fill: '#224b70'
+            }, wrap);
+            txt.textContent = label;
+          }
+        } else {
+          const coreR = Math.max(2.3, r * 0.25);
+          svgEl('circle', {
+            cx: 0, cy: 0, r: coreR.toFixed(2),
+            fill: driven ? '#dfb888' : '#e8e4dc',
+            stroke: '#272420', 'stroke-width': 1.15
+          }, wrap);
+          if (driven && r >= 15) {
+            // 駆動ロールのドライブスプライン十字
+            const cr = (coreR * 0.65).toFixed(2);
+            svgEl('path', {
+              d: `M -${cr} 0 H ${cr} M 0 -${cr} V ${cr}`,
+              stroke: '#272420', 'stroke-width': 1.05
+            }, wrap);
+          }
+        }
+
+        return rotGroup;
+      }
+
+      /* =======================================================================
+         5. 全SVGレイヤーの初期構築（DOM参照をキャッシュして60fps高速更新）
+         ======================================================================= */
+      const mainSvg = document.getElementById('mainSvg');
+      const layerLineEq = document.getElementById('layerLineEquipment');
+      const layerStrip = document.getElementById('layerCopperStrip');
+      const layerReels = document.getElementById('layerReels');
+      const mill6HiGroup = document.getElementById('mill6HiGroup');
+      const mill20HiGroup = document.getElementById('mill20HiGroup');
+      const layerAnnotations = document.getElementById('layerAnnotations');
+
+      const refs = {
+        rolls6: [],
+        rolls20: [],
+        housing6Solid: null,
+        housing6Phantom: null,
+        internal6: null,
+        housing20Solid: null,
+        housing20Phantom: null,
+        internal20: null,
+        imrShiftIndicators: [],
+        hydraulicArrows: [],
+        coolantParticles6: [],
+        coolantParticles20: [],
+        // ライン・コイル・スナバー
+        payoffOuterCircle: null,
+        payoffLayersGroup: null,
+        payoffRotGroup: null,
+        tensionOuterCircle: null,
+        tensionLayersGroup: null,
+        tensionRotGroup: null,
+        snubberArmLine: null,
+        snubberArmLine2: null,
+        snubberRollWrap: null,
+        snubberRollRot: null,
+        entryDefRot: null,
+        exitDefRot: null,
+        entryGaugeValText: null,
+        exitGaugeValText: null,
+        // 銅条＆マーカー
+        stripEntrySlope: null,
+        stripEntryHoriz: null,
+        stripBite: null,
+        stripExitHoriz: null,
+        stripExitSlope: null,
+        entryMarkers: [],
+        exitMarkers: [],
+        speedEntryLabel: null,
+        speedExitLabel: null,
+        // 注釈グループ
+        annoCommon: null,
+        annoSolid6: null,
+        annoSolid20: null,
+        annoXray6: null,
+        annoXray20: null,
+        // 拡大図インセット
+        insetStripShape: document.getElementById('insetStripShape'),
+        insetStripClipPath: document.getElementById('insetStripClipPath'),
+        insetCoolantTop: document.getElementById('insetCoolantTop'),
+        insetCoolantBot: document.getElementById('insetCoolantBot'),
+        insetGrainsGroup: document.getElementById('insetGrainsGroup'),
+        insetTopRoll: document.getElementById('insetTopRoll'),
+        insetBotRoll: document.getElementById('insetBotRoll'),
+        insetLabelIn: document.getElementById('insetLabelIn'),
+        insetLabelOut: document.getElementById('insetLabelOut'),
+        insetCaption: document.getElementById('insetCaption'),
+        insetWRBadge: document.getElementById('insetWRBadge'),
+        insetGrains: [],
+        insetTopRot: null,
+        insetBotRot: null,
+        insetRollMode: null
+      };
+
+      // --- 5-A. 入側・出側ライン機器（デフレクター・板厚計・張力＆速度矢印） ---
+      function buildLineEquipment() {
+        // 入側デフレクタースタンド＆ロール
+        addSketchPoly(layerLineEq, [
+          { x: ENTRY_DEF.x - 13, y: FLOOR_Y },
+          { x: ENTRY_DEF.x - 7, y: ENTRY_DEF.y + 4 },
+          { x: ENTRY_DEF.x + 7, y: ENTRY_DEF.y + 4 },
+          { x: ENTRY_DEF.x + 13, y: FLOOR_Y }
+        ], { fill: '#d6d1c6', hatch: 'url(#hatchSteel)', seed: 101 });
+        refs.entryDefRot = buildSketchRollSVG(layerLineEq, { x: ENTRY_DEF.x, y: ENTRY_DEF.y, r: ENTRY_DEF.r, role: 'DEF', side: 1 }, 105);
+
+        // 出側デフレクタースタンド＆ロール
+        addSketchPoly(layerLineEq, [
+          { x: EXIT_DEF.x - 13, y: FLOOR_Y },
+          { x: EXIT_DEF.x - 7, y: EXIT_DEF.y + 4 },
+          { x: EXIT_DEF.x + 7, y: EXIT_DEF.y + 4 },
+          { x: EXIT_DEF.x + 13, y: FLOOR_Y }
+        ], { fill: '#d6d1c6', hatch: 'url(#hatchSteel)', seed: 111 });
+        refs.exitDefRot = buildSketchRollSVG(layerLineEq, { x: EXIT_DEF.x, y: EXIT_DEF.y, r: EXIT_DEF.r, role: 'DEF', side: 1 }, 115);
+
+        // 非接触X線板厚計（入側・出側）
+        const buildGauge = (gx, isExit) => {
+          const g = svgEl('g', {}, layerLineEq);
+          const topY = PASSLINE_Y - 52;
+          const botY = PASSLINE_Y + 52;
+          addSketchRect(g, gx - 4, botY, 8, FLOOR_Y - botY, { fill: '#cbc6bc', seed: isExit ? 130 : 120 });
+          addSketchRect(g, gx - 12, topY, 24, 18, { fill: '#dde6ee', rx: 3, seed: isExit ? 132 : 122 });
+          addSketchRect(g, gx - 12, botY - 18, 24, 18, { fill: '#dde6ee', rx: 3, seed: isExit ? 134 : 124 });
+          // C字アーム
+          svgEl('path', {
+            d: `M ${gx + 12} ${topY + 9} H ${gx + 20} V ${botY - 9} H ${gx + 12}`,
+            fill: 'none', stroke: '#272420', 'stroke-width': 1.8, 'stroke-linejoin': 'round'
+          }, g);
+          // X線計測ビーム
+          svgEl('line', {
+            x1: gx, y1: topY + 18, x2: gx, y2: botY - 18,
+            stroke: '#b53a2c', 'stroke-width': 1.4, 'stroke-dasharray': '3,2.5', 'stroke-opacity': 0.72
+          }, g);
+          const txt = svgEl('text', {
+            x: gx, y: topY - 7, 'text-anchor': 'middle',
+            'font-size': 11, 'font-weight': 700,
+            fill: isExit ? '#b03326' : '#224b70'
+          }, g);
+          return txt;
+        };
+        refs.entryGaugeValText = buildGauge(ENTRY_GAUGE_X, false);
+        refs.exitGaugeValText = buildGauge(EXIT_GAUGE_X, true);
+
+        // 入側：後方張力 & 速度ベクトル表示
+        const inTensionG = svgEl('g', {}, layerLineEq);
+        svgEl('line', {
+          x1: 468, y1: PASSLINE_Y + 34, x2: 416, y2: PASSLINE_Y + 34,
+          stroke: '#224b70', 'stroke-width': 2.0, 'marker-end': 'url(#arrowBlue)'
+        }, inTensionG);
+        const btTxt = svgEl('text', {
+          x: 442, y: PASSLINE_Y + 49, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, fill: '#224b70'
+        }, inTensionG);
+        btTxt.textContent = '← 後方張力 T_b';
+
+        svgEl('line', {
+          x1: 422, y1: PASSLINE_Y - 22, x2: 466, y2: PASSLINE_Y - 22,
+          stroke: '#9a431e', 'stroke-width': 2.0, 'marker-end': 'url(#arrowCopper)'
+        }, inTensionG);
+        refs.speedEntryLabel = svgEl('text', {
+          x: 444, y: PASSLINE_Y - 29, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, fill: '#9a431e'
+        }, inTensionG);
+
+        // 出側：前方張力 & 高速化速度ベクトル表示
+        const outTensionG = svgEl('g', {}, layerLineEq);
+        svgEl('line', {
+          x1: 814, y1: PASSLINE_Y + 34, x2: 874, y2: PASSLINE_Y + 34,
+          stroke: '#b03326', 'stroke-width': 2.1, 'marker-end': 'url(#arrowRed)'
+        }, outTensionG);
+        const ftTxt = svgEl('text', {
+          x: 844, y: PASSLINE_Y + 49, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, fill: '#b03326'
+        }, outTensionG);
+        ftTxt.textContent = '前方張力 T_f →';
+
+        // 2本矢印で高速走行を明示
+        svgEl('line', {
+          x1: 810, y1: PASSLINE_Y - 22, x2: 868, y2: PASSLINE_Y - 22,
+          stroke: '#b03326', 'stroke-width': 2.1, 'marker-end': 'url(#arrowRed)'
+        }, outTensionG);
+        svgEl('line', {
+          x1: 822, y1: PASSLINE_Y - 17, x2: 856, y2: PASSLINE_Y - 17,
+          stroke: '#b03326', 'stroke-width': 1.2, 'stroke-opacity': 0.45, 'marker-end': 'url(#arrowRed)'
+        }, outTensionG);
+        refs.speedExitLabel = svgEl('text', {
+          x: 839, y: PASSLINE_Y - 29, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, fill: '#b03326'
+        }, outTensionG);
+      }
+
+      // --- 5-B. ペイオフリール（スナバーロール付き）& テンションリール ---
+      function buildReels() {
+        const buildReelUnit = (center, isPayoff, seedBase) => {
+          const g = svgEl('g', {}, layerReels);
+          // 重厚なペデスタル基礎
+          addSketchPoly(g, [
+            { x: center.x - 50, y: FLOOR_Y },
+            { x: center.x - 35, y: center.y + 16 },
+            { x: center.x + 35, y: center.y + 16 },
+            { x: center.x + 50, y: FLOOR_Y }
+          ], { fill: '#d2ccc1', hatch: 'url(#hatchSteel)', seed: seedBase });
+
+          // コイル中心グループ
+          const coilG = svgEl('g', { transform: `translate(${center.x}, ${center.y})` }, g);
+          const outerCircle = svgEl('circle', {
+            cx: 0, cy: 0, r: 60, fill: 'url(#copperCoilGrad)', stroke: '#272420', 'stroke-width': 2.0
+          }, coilG);
+
+          // 巻き層同心円グループ（動的に更新）
+          const layersG = svgEl('g', {}, coilG);
+
+          // 回転する端面マーク＋拡張マンドレル
+          const rotG = svgEl('g', {}, coilG);
+          // 銅コイル端面マーキング（回転方向を直感的に表示）
+          for (let i = 0; i < 4; i++) {
+            const a = (i * Math.PI) / 2;
+            svgEl('line', {
+              x1: (Math.cos(a) * (COIL_R_CORE + 3)).toFixed(1),
+              y1: (Math.sin(a) * (COIL_R_CORE + 3)).toFixed(1),
+              x2: (Math.cos(a) * 56).toFixed(1),
+              y2: (Math.sin(a) * 56).toFixed(1),
+              stroke: '#6b290e', 'stroke-width': 1.25, 'stroke-opacity': 0.55,
+              class: 'coil-spoke'
+            }, rotG);
+          }
+
+          // 拡張マンドレル（4分割セグメントドラム）
+          svgEl('circle', {
+            cx: 0, cy: 0, r: COIL_R_CORE,
+            fill: 'url(#rollSteelGrad)', stroke: '#272420', 'stroke-width': 1.8
+          }, rotG);
+          for (let i = 0; i < 4; i++) {
+            const a = (i * Math.PI) / 2 + Math.PI / 4;
+            svgEl('line', {
+              x1: (Math.cos(a) * 9.5).toFixed(1),
+              y1: (Math.sin(a) * 9.5).toFixed(1),
+              x2: (Math.cos(a) * (COIL_R_CORE - 1.5)).toFixed(1),
+              y2: (Math.sin(a) * (COIL_R_CORE - 1.5)).toFixed(1),
+              stroke: '#272420', 'stroke-width': 1.6
+            }, rotG);
+          }
+          svgEl('circle', { cx: 0, cy: 0, r: 9.5, fill: '#75838f', stroke: '#272420', 'stroke-width': 1.4 }, rotG);
+
+          // 回転方向を示す小さな白い円弧矢印（静止）
+          svgEl('path', {
+            d: 'M -24 -26 A 35 35 0 0 1 20 -29',
+            fill: 'none', stroke: '#fff7eb', 'stroke-width': 2.0, 'stroke-linecap': 'round', 'stroke-opacity': 0.85
+          }, coilG);
+          svgEl('path', {
+            d: 'M 14 -33 L 22 -28 L 14 -24',
+            fill: 'none', stroke: '#fff7eb', 'stroke-width': 1.9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-opacity': 0.85
+          }, coilG);
+
+          return { outerCircle, layersG, rotG };
+        };
+
+        const po = buildReelUnit(PAYOFF_C, true, 200);
+        refs.payoffOuterCircle = po.outerCircle;
+        refs.payoffLayersGroup = po.layersG;
+        refs.payoffRotGroup = po.rotG;
+
+        const tr = buildReelUnit(TENSION_C, false, 230);
+        refs.tensionOuterCircle = tr.outerCircle;
+        refs.tensionLayersGroup = tr.layersG;
+        refs.tensionRotGroup = tr.rotG;
+
+        // ペイオフリール専用：スナバーロール（押さえロール＋油圧スイングアーム）
+        const snubG = svgEl('g', {}, layerReels);
+        // 固定ベース支柱
+        addSketchRect(snubG, SNUBBER_PIVOT.x - 10, SNUBBER_PIVOT.y, 20, FLOOR_Y - SNUBBER_PIVOT.y, {
+          fill: '#cbc6bc', hatch: 'url(#hatchSteel)', seed: 255
+        });
+        // スイングアーム（動的に先端位置を更新）
+        refs.snubberArmLine = svgEl('line', {
+          x1: SNUBBER_PIVOT.x, y1: SNUBBER_PIVOT.y + 8,
+          x2: 130, y2: 350,
+          stroke: '#606870', 'stroke-width': 9, 'stroke-linecap': 'round'
+        }, snubG);
+        refs.snubberArmLine2 = svgEl('line', {
+          x1: SNUBBER_PIVOT.x, y1: SNUBBER_PIVOT.y + 8,
+          x2: 130, y2: 350,
+          stroke: '#272420', 'stroke-width': 1.5, 'stroke-linecap': 'round'
+        }, snubG);
+        // 支点ピン
+        svgEl('circle', {
+          cx: SNUBBER_PIVOT.x, cy: SNUBBER_PIVOT.y + 8, r: 7.5,
+          fill: '#9ba6b0', stroke: '#272420', 'stroke-width': 1.5
+        }, snubG);
+        // 先端のスナバーロール
+        refs.snubberRollWrap = svgEl('g', { transform: 'translate(130, 350)' }, snubG);
+        refs.snubberRollRot = buildSketchRollSVG(refs.snubberRollWrap, { x: 0, y: 0, r: SNUBBER_R, role: 'DEF', side: -1 }, 260);
+      }
+
+      // --- 5-C. 銅条ストリップ＆体積一定則マーカープール ---
+      function buildCopperStrip() {
+        refs.stripEntrySlope = svgEl('polygon', { fill: 'url(#copperEntryGrad)', stroke: '#272420', 'stroke-width': 1.35, 'stroke-linejoin': 'round' }, layerStrip);
+        refs.stripEntryHoriz = svgEl('polygon', { fill: 'url(#copperEntryGrad)', stroke: '#272420', 'stroke-width': 1.35, 'stroke-linejoin': 'round' }, layerStrip);
+        refs.stripBite = svgEl('polygon', { fill: 'url(#copperExitGrad)', stroke: '#272420', 'stroke-width': 1.3, 'stroke-linejoin': 'round' }, layerStrip);
+        refs.stripExitHoriz = svgEl('polygon', { fill: 'url(#copperExitGrad)', stroke: '#272420', 'stroke-width': 1.35, 'stroke-linejoin': 'round' }, layerStrip);
+        refs.stripExitSlope = svgEl('polygon', { fill: 'url(#copperExitGrad)', stroke: '#272420', 'stroke-width': 1.35, 'stroke-linejoin': 'round' }, layerStrip);
+
+        // 入側移動マーカー（速度 v0、狭いピッチ）
+        const inMarkerG = svgEl('g', {}, layerStrip);
+        for (let i = 0; i < 20; i++) {
+          const m = svgEl('path', {
+            d: 'M -1.5 -4.2 L 1.8 0 L -1.5 4.2',
+            fill: 'none', stroke: '#6c290d', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+          }, inMarkerG);
+          refs.entryMarkers.push(m);
+        }
+
+        // 出側移動マーカー（速度 v1 = v0*(t0/t1)、広いピッチ＋光沢スピードライン）
+        const outMarkerG = svgEl('g', {}, layerStrip);
+        for (let i = 0; i < 20; i++) {
+          const g = svgEl('g', {}, outMarkerG);
+          svgEl('line', {
+            x1: -11, y1: 0, x2: -1, y2: 0,
+            stroke: '#fff6ea', 'stroke-width': 1.5, 'stroke-opacity': 0.85, 'stroke-linecap': 'round'
+          }, g);
+          svgEl('path', {
+            d: 'M -1.5 -2.6 L 2.2 0 L -1.5 2.6',
+            fill: 'none', stroke: '#6c290d', 'stroke-width': 1.65, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+          }, g);
+          refs.exitMarkers.push(g);
+        }
+      }
+
+      // --- 5-D. クーラント（圧延油）噴射ノズル＆ベクター飛沫生成 ---
+      function buildCoolantGroup(parent, nozzleX, nozzleY, particleArr) {
+        const g = svgEl('g', {}, parent);
+
+        // オイルパン（床面直上のクーラント受け皿）
+        addSketchRect(g, MILL_CX - 110, FLOOR_Y - 13, 220, 13, {
+          fill: 'rgba(130, 196, 218, 0.34)', stroke: '#4c575e', strokeWidth: 1.25, double: false, seed: 301
+        });
+
+        // 入側・出側ワイパー（圧延油の飛散防止ゴムブレード）
+        const wiperX = nozzleX + 26;
+        [-1, 1].forEach((sx) => {
+          [-1, 1].forEach((sy) => {
+            addSketchRect(g, MILL_CX + sx * wiperX - 4, PASSLINE_Y + sy * 10 - (sy < 0 ? 14 : 0), 8, 14, {
+              fill: '#5c666e', stroke: '#272420', strokeWidth: 1.1, double: false, rx: 1.5
+            });
+          });
+        });
+
+        // 4ノズル＋スプレー扇
+        const dirs = [
+          { sx: -1, sy: -1 }, { sx: -1, sy: 1 },
+          { sx: 1, sy: -1 }, { sx: 1, sy: 1 }
+        ];
+        dirs.forEach((d) => {
+          const nx = MILL_CX + d.sx * nozzleX;
+          const ny = PASSLINE_Y + d.sy * nozzleY;
+          const tx = MILL_CX + d.sx * 10;
+          const ty = PASSLINE_Y + d.sy * 4;
+
+          svgEl('polygon', {
+            points: `${nx},${ny} ${tx - d.sx * 6},${ty - d.sy * 12} ${tx + d.sx * 7},${ty + d.sy * 9}`,
+            fill: d.sx < 0 ? 'url(#coolantConeL)' : 'url(#coolantConeR)'
+          }, g);
+
+          // ノズル配管
+          svgEl('line', {
+            x1: nx + d.sx * 24, y1: ny + d.sy * 8, x2: nx, y2: ny,
+            stroke: '#336275', 'stroke-width': 3.2, 'stroke-linecap': 'round'
+          }, g);
+          svgEl('circle', {
+            cx: nx, cy: ny, r: 3.3, fill: '#6cc3de', stroke: '#272420', 'stroke-width': 1.1
+          }, g);
+        });
+
+        // ベクター飛沫粒子プール（36粒）
+        for (let i = 0; i < 36; i++) {
+          const d = dirs[i % 4];
+          const c = svgEl('circle', {
+            cx: MILL_CX, cy: PASSLINE_Y, r: 1.8, fill: '#47a6c7', opacity: 0.7
+          }, g);
+          particleArr.push({
+            el: c,
+            sx: d.sx,
+            sy: d.sy,
+            nozzleX,
+            nozzleY,
+            phase: i / 36,
+            spread: hash1(i * 43 + 19),
+            speed: 0.8 + (hash1(i * 61 + 5) * 0.5 + 0.5) * 0.55
+          });
+        }
+        return g;
+      }
+
+      // --- 5-E. 6段UCミル構築（内部構造＋外装ハウジング＋透過ファントム線） ---
+      function buildMill6Hi() {
+        const hw = 120;
+        const hL = MILL_CX - hw;
+        const hR = MILL_CX + hw;
+        const hTop = 166;
+        const hBot = FLOOR_Y;
+        const winW = 148;
+        const winL = MILL_CX - winW / 2;
+
+        // 1) 内部構造グループ
+        const internal = svgEl('g', {}, mill6HiGroup);
+        refs.internal6 = internal;
+
+        // 内窓の薄い奥行き陰影
+        svgEl('rect', {
+          x: winL, y: hTop + 32, width: winW, height: hBot - hTop - 60,
+          fill: 'rgba(216, 210, 198, 0.34)'
+        }, internal);
+
+        // 上部：油圧圧下シリンダー＆圧下スクリュー
+        const cylY = hTop + 26;
+        const cylH = 38;
+        addSketchRect(internal, MILL_CX - 38, cylY, 76, cylH, {
+          fill: '#e3d5be', hatch: 'url(#hatchHydraulic)', seed: 601
+        });
+        // ピストンラム（上BURチョックを押圧）
+        const topBurY = GEOM_6HI.rolls[2].y - GEOM_6HI.rB;
+        addSketchRect(internal, MILL_CX - 22, cylY + cylH, 44, Math.max(8, topBurY - (cylY + cylH) + 6), {
+          fill: '#e7eef3', seed: 605
+        });
+        // 圧下荷重の赤い脈動矢印
+        const hydArrow = svgEl('line', {
+          x1: MILL_CX, y1: cylY + 7, x2: MILL_CX, y2: cylY + cylH - 5,
+          stroke: '#b03326', 'stroke-width': 2.3, 'marker-end': 'url(#arrowRed)'
+        }, internal);
+        refs.hydraulicArrows.push(hydArrow);
+
+        // 各ロールのチョック（軸受箱）＋ワークロールベンダー＋中間ロールシフト機構
+        GEOM_6HI.rolls.forEach((rl, i) => {
+          const cw = rl.role === 'BUR' ? 96 : (rl.role === 'IMR' ? 70 : 50);
+          const ch = rl.role === 'BUR' ? 42 : (rl.role === 'IMR' ? 28 : 22);
+          addSketchRect(internal, rl.x - cw / 2, rl.y - ch / 2, cw, ch, {
+            fill: rl.role === 'IMR' ? 'rgba(232, 213, 184, 0.62)' : 'rgba(202, 212, 220, 0.56)',
+            stroke: '#4b453d', strokeWidth: 1.2, double: false, seed: 610 + i
+          });
+
+          // ワークロールベンダー（WRチョック左右の小さな油圧ジャッキ）
+          if (rl.role === 'WR') {
+            [-1, 1].forEach((sx) => {
+              const bx = rl.x + sx * (cw / 2 + 6);
+              addSketchRect(internal, bx - 4, rl.y - 9, 8, 18, {
+                fill: '#d9c5a7', stroke: '#3f3a33', strokeWidth: 1.0, double: false
+              });
+              svgEl('line', {
+                x1: bx, y1: rl.y + rl.side * 5, x2: bx, y2: rl.y - rl.side * 7,
+                stroke: '#b03326', 'stroke-width': 1.25
+              }, internal);
+            });
+          }
+
+          // 中間ロール（IMR）軸方向シフト機構インジケーター
+          if (rl.role === 'IMR') {
+            const sDir = rl.side < 0 ? 1 : -1;
+            const shiftBox = svgEl('g', {}, internal);
+            // シフトガイドレール
+            svgEl('line', {
+              x1: rl.x - 46, y1: rl.y, x2: rl.x + 46, y2: rl.y,
+              stroke: '#224b70', 'stroke-width': 1.1, 'stroke-dasharray': '3,2', 'stroke-opacity': 0.55
+            }, shiftBox);
+            // 軸方向シフト矢印（左右）
+            const ax = rl.x + sDir * 48;
+            svgEl('line', {
+              x1: ax - 9, y1: rl.y, x2: ax + 11, y2: rl.y,
+              stroke: '#224b70', 'stroke-width': 1.6, 'marker-end': 'url(#arrowBlue)'
+            }, shiftBox);
+            svgEl('line', {
+              x1: ax + 9, y1: rl.y, x2: ax - 11, y2: rl.y,
+              stroke: '#224b70', 'stroke-width': 1.6, 'marker-end': 'url(#arrowBlue)'
+            }, shiftBox);
+            // 動くシフトマーカースライダー
+            const sliderDot = svgEl('rect', {
+              x: rl.x - 4, y: rl.y - 4, width: 8, height: 8, rx: 1.5,
+              fill: '#224b70', stroke: '#fffdf8', 'stroke-width': 1.0
+            }, shiftBox);
+            refs.imrShiftIndicators.push({ el: sliderDot, baseX: rl.x, side: rl.side });
+          }
+        });
+
+        // クーラントノズル＆飛沫
+        buildCoolantGroup(internal, 56, 26, refs.coolantParticles6);
+
+        // 6本ロール本体
+        GEOM_6HI.rolls.forEach((rl, idx) => {
+          const rotG = buildSketchRollSVG(internal, rl, 650 + idx * 17);
+          refs.rolls6.push({ roll: rl, rotG });
+        });
+
+        // 2) 外装ハウジング（不透明時：門型支柱・カバー・点検窓・リベット）
+        const solid = svgEl('g', {}, mill6HiGroup);
+        refs.housing6Solid = solid;
+
+        addSketchRect(solid, hL, hTop, hw * 2, hBot - hTop, {
+          fill: 'url(#housingGrad)', hatch: 'url(#hatchSteel)', rx: 5, strokeWidth: 2.0, seed: 701
+        });
+        // 左右極厚門型支柱
+        addSketchRect(solid, hL, hTop, 42, hBot - hTop, {
+          fill: '#c8c4bb', hatch: 'url(#hatchCastIron)', strokeWidth: 1.8, seed: 704
+        });
+        addSketchRect(solid, hR - 42, hTop, 42, hBot - hTop, {
+          fill: '#c8c4bb', hatch: 'url(#hatchCastIron)', strokeWidth: 1.8, seed: 707
+        });
+        // 上部圧下シリンダー屋根ボックス
+        addSketchRect(solid, MILL_CX - 54, hTop - 26, 108, 28, {
+          fill: '#beb9af', hatch: 'url(#hatchSteel)', rx: 3, strokeWidth: 1.8, seed: 710
+        });
+        // 正面メンテナンスドア
+        addSketchRect(solid, winL + 8, hTop + 34, winW - 16, hBot - hTop - 68, {
+          fill: '#ddd9d0', rx: 4, strokeWidth: 1.45, seed: 713
+        });
+        // 点検覗き窓
+        addSketchRect(solid, MILL_CX - 46, PASSLINE_Y - 22, 92, 44, {
+          fill: 'rgba(54, 66, 76, 0.24)', rx: 3, strokeWidth: 1.5, seed: 716
+        });
+        svgEl('line', {
+          x1: MILL_CX - 34, y1: PASSLINE_Y + 12, x2: MILL_CX - 12, y2: PASSLINE_Y - 12,
+          stroke: '#ffffff', 'stroke-width': 2.0, 'stroke-opacity': 0.65, 'stroke-linecap': 'round'
+        }, solid);
+
+        // 銘板
+        addSketchRect(solid, MILL_CX - 56, hTop + 50, 112, 24, {
+          fill: '#f5efe2', rx: 2.5, strokeWidth: 1.2, double: false
+        });
+        const plate6 = svgEl('text', {
+          x: MILL_CX, y: hTop + 66, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#272420'
+        }, solid);
+        plate6.textContent = '6-HI UC MILL';
+
+        // 固定ボルト列
+        [hL + 21, hR - 21].forEach((bx) => {
+          [hTop + 20, hTop + 115, hBot - 115, hBot - 22].forEach((by) => {
+            svgEl('circle', { cx: bx, cy: by, r: 4.2, fill: '#97938a', stroke: '#272420', 'stroke-width': 1.1 }, solid);
+          });
+        });
+
+        // 3) 透過時のファントム輪郭（製図の一点鎖線）
+        const phantom = svgEl('g', { opacity: 0 }, mill6HiGroup);
+        refs.housing6Phantom = phantom;
+        addSketchRect(phantom, hL, hTop, 40, hBot - hTop, {
+          fill: 'rgba(186,182,174,0.18)', stroke: '#4c463e', strokeWidth: 1.35, dash: '10,4,2,4', double: false
+        });
+        addSketchRect(phantom, hR - 40, hTop, 40, hBot - hTop, {
+          fill: 'rgba(186,182,174,0.18)', stroke: '#4c463e', strokeWidth: 1.35, dash: '10,4,2,4', double: false
+        });
+        addSketchRect(phantom, hL, hTop, hw * 2, 28, {
+          fill: 'rgba(186,182,174,0.14)', stroke: '#4c463e', strokeWidth: 1.3, dash: '10,4,2,4', double: false
+        });
+        addSketchRect(phantom, MILL_CX - 54, hTop - 26, 108, 26, {
+          fill: 'none', stroke: '#4c463e', strokeWidth: 1.2, dash: '7,4', double: false
+        });
+      }
+
+      // --- 5-F. 20段圧延機（ゼンジミア 1-2-3-4クラスター）構築 ---
+      function buildMill20Hi() {
+        const hw = 154;
+        const hL = MILL_CX - hw;
+        const hTop = 194;
+        const hBot = FLOOR_Y;
+        const cavR = GEOM_20HI.cavityR;
+
+        // 1) 内部構造グループ
+        const internal = svgEl('g', {}, mill20HiGroup);
+        refs.internal20 = internal;
+
+        // モノブロック内部の円形ボア（クラスター収容空間）
+        svgEl('circle', {
+          cx: MILL_CX, cy: PASSLINE_Y, r: cavR,
+          fill: 'rgba(220, 215, 206, 0.45)', stroke: '#4e483f', 'stroke-width': 1.5
+        }, internal);
+
+        // 上部：偏心軸圧下調整ラック＆油圧アクチュエータ
+        addSketchRect(internal, MILL_CX - 48, hTop - 22, 96, 26, {
+          fill: '#e3d5be', hatch: 'url(#hatchHydraulic)', seed: 802
+        });
+        const hydArrow20 = svgEl('line', {
+          x1: MILL_CX, y1: hTop - 16, x2: MILL_CX, y2: hTop + 14,
+          stroke: '#b03326', 'stroke-width': 2.3, 'marker-end': 'url(#arrowRed)'
+        }, internal);
+        refs.hydraulicArrows.push(hydArrow20);
+
+        // サドル（分割バックアップベアリング軸 A〜H をモノブロック内壁に固定する座）
+        GEOM_20HI.rolls.forEach((rl) => {
+          if (rl.role === 'BKG') {
+            const ang = Math.atan2(rl.y - PASSLINE_Y, rl.x - MILL_CX);
+            const x2 = rl.x + Math.cos(ang) * (rl.r + 12);
+            const y2 = rl.y + Math.sin(ang) * (rl.r + 12);
+            svgEl('line', {
+              x1: rl.x.toFixed(1), y1: rl.y.toFixed(1),
+              x2: x2.toFixed(1), y2: y2.toFixed(1),
+              stroke: '#6c757d', 'stroke-width': 11, 'stroke-opacity': 0.7
+            }, internal);
+            svgEl('line', {
+              x1: rl.x.toFixed(1), y1: rl.y.toFixed(1),
+              x2: x2.toFixed(1), y2: y2.toFixed(1),
+              stroke: '#272420', 'stroke-width': 1.2, 'stroke-opacity': 0.55
+            }, internal);
+          }
+        });
+
+        // クーラントノズル＆飛沫
+        buildCoolantGroup(internal, 60, 22, refs.coolantParticles20);
+
+        // 20本すべてのロールを描画（1-2-3-4 上下対称）
+        GEOM_20HI.rolls.forEach((rl, idx) => {
+          const rotG = buildSketchRollSVG(internal, rl, 820 + idx * 13);
+          refs.rolls20.push({ roll: rl, rotG });
+        });
+
+        // 2) 外装（一体型モノブロックハウジング＋円形開閉フロントドア）
+        const solid = svgEl('g', {}, mill20HiGroup);
+        refs.housing20Solid = solid;
+
+        addSketchRect(solid, hL, hTop, hw * 2, hBot - hTop, {
+          fill: 'url(#housingGrad)', hatch: 'url(#hatchCastIron)', rx: 14, strokeWidth: 2.1, seed: 860
+        });
+        // 上部圧下油圧ボックス
+        addSketchRect(solid, MILL_CX - 56, hTop - 26, 112, 28, {
+          fill: '#bcb7ad', hatch: 'url(#hatchSteel)', rx: 4, strokeWidth: 1.8, seed: 863
+        });
+
+        // ゼンジミア特有の大型フロントドア
+        svgEl('circle', {
+          cx: MILL_CX, cy: PASSLINE_Y, r: cavR - 6,
+          fill: '#dfd9ce', stroke: '#272420', 'stroke-width': 1.9
+        }, solid);
+        svgEl('circle', {
+          cx: MILL_CX, cy: PASSLINE_Y, r: cavR - 6,
+          fill: 'url(#hatchSteel)', opacity: 0.45
+        }, solid);
+
+        // 左ヒンジ×2 & 右クランプレバー
+        addSketchRect(solid, MILL_CX - cavR - 4, PASSLINE_Y - 58, 17, 28, { fill: '#9b978e', rx: 2, strokeWidth: 1.4 });
+        addSketchRect(solid, MILL_CX - cavR - 4, PASSLINE_Y + 30, 17, 28, { fill: '#9b978e', rx: 2, strokeWidth: 1.4 });
+        addSketchRect(solid, MILL_CX + cavR - 14, PASSLINE_Y - 15, 20, 30, { fill: '#9b978e', rx: 3, strokeWidth: 1.4 });
+
+        // 覗き窓
+        addSketchRect(solid, MILL_CX - 36, PASSLINE_Y - 16, 72, 32, {
+          fill: 'rgba(54, 66, 76, 0.26)', rx: 4, strokeWidth: 1.5
+        });
+
+        // 銘板
+        addSketchRect(solid, MILL_CX - 70, PASSLINE_Y - 78, 140, 24, {
+          fill: '#f5efe2', rx: 3, strokeWidth: 1.2, double: false
+        });
+        const plate20 = svgEl('text', {
+          x: MILL_CX, y: PASSLINE_Y - 62, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#272420'
+        }, solid);
+        plate20.textContent = '20-HI SENDZIMIR';
+
+        // 3) 透過時のファントム輪郭（一点鎖線）
+        const phantom = svgEl('g', { opacity: 0 }, mill20HiGroup);
+        refs.housing20Phantom = phantom;
+        addSketchRect(phantom, hL, hTop, hw * 2, hBot - hTop, {
+          fill: 'rgba(186,182,174,0.11)', stroke: '#4c463e', strokeWidth: 1.45, dash: '12,4,2,4', rx: 14, double: false
+        });
+        svgEl('circle', {
+          cx: MILL_CX, cy: PASSLINE_Y, r: cavR - 6,
+          fill: 'none', stroke: '#4c463e', 'stroke-width': 1.15, 'stroke-dasharray': '6,5'
+        }, phantom);
+      }
+
+      // --- 5-G. 手描き注釈レイヤー構築（圧延機・透過状態に応じて最適切替） ---
+      function addCallout(parent, tx, ty, lx, ly, title, sub, opts = {}) {
+        const { color = '#224b70', align = 'left', seed = 900 } = opts;
+        const g = svgEl('g', {}, parent);
+
+        const charW = 10.6;
+        const w1 = title.length * charW;
+        const w2 = sub ? sub.length * 8.6 : 0;
+        const boxW = Math.max(w1, w2) + 16;
+        const boxH = sub ? 34 : 21;
+
+        let bx = lx;
+        if (align === 'center') bx = lx - boxW / 2;
+        else if (align === 'right') bx = lx - boxW;
+        const by = ly - boxH / 2;
+
+        // ターゲットからカード縁への折れ線リーダーライン
+        const ax = tx < bx ? bx : (tx > bx + boxW ? bx + boxW : bx + boxW / 2);
+        const ay = by + boxH / 2;
+        const mx = ax + (tx - ax) * 0.35;
+
+        svgEl('path', {
+          d: `${sketchLinePath(tx, ty, mx, ay, seed, 0.45)} L ${ax.toFixed(1)} ${ay.toFixed(1)}`,
+          fill: 'none', stroke: color, 'stroke-width': 1.25, 'stroke-linecap': 'round'
+        }, g);
+
+        svgEl('circle', {
+          cx: tx, cy: ty, r: 3.1, fill: '#fffdf8', stroke: color, 'stroke-width': 1.6
+        }, g);
+
+        // 注釈カード（枠線にのみ軽い手描きフィルタ、文字は完全シャープ）
+        svgEl('rect', {
+          x: bx, y: by, width: boxW, height: boxH, rx: 4.5,
+          fill: 'rgba(253, 249, 241, 0.93)', stroke: color, 'stroke-width': 1.2,
+          filter: 'url(#sketchSoft)'
+        }, g);
+
+        const t1 = svgEl('text', {
+          x: bx + 8, y: by + 14.5, 'font-size': 11, 'font-weight': 700, fill: color
+        }, g);
+        t1.textContent = title;
+
+        if (sub) {
+          const t2 = svgEl('text', {
+            x: bx + 8, y: by + 27.5, 'font-size': 9.4, 'font-weight': 600, fill: '#544c42'
+          }, g);
+          t2.textContent = sub;
+        }
+        return g;
+      }
+
+      function buildAllAnnotations() {
+        // 共通ライン注釈
+        const common = svgEl('g', {}, layerAnnotations);
+        refs.annoCommon = common;
+        addCallout(common, PAYOFF_C.x - 18, PAYOFF_C.y + 52, 140, 578, 'ペイオフリール（巻出機）', '拡張マンドレルで銅コイルを供給', { align: 'center', seed: 910 });
+        addCallout(common, SNUBBER_PIVOT.x + 28, SNUBBER_PIVOT.y + 28, 128, 250, 'スナバーロール', 'コイル外周を押さえ跳ね上がりを防止', { align: 'center', seed: 912 });
+        addCallout(common, ENTRY_DEF.x, ENTRY_DEF.y + 16, 336, 578, '入側デフレクターロール', 'パスライン高さと張力を安定化', { align: 'center', seed: 914 });
+        addCallout(common, ENTRY_GAUGE_X, PASSLINE_Y - 52, 396, 266, '入側板厚計（X線）', '圧延前の板厚 t₀ を連続監視', { align: 'center', seed: 916 });
+        addCallout(common, EXIT_GAUGE_X, PASSLINE_Y - 52, 884, 266, '出側板厚計（X線）', '圧延後の板厚 t₁ を精密計測', { align: 'center', seed: 918 });
+        addCallout(common, EXIT_DEF.x, EXIT_DEF.y + 16, 944, 578, '出側デフレクターロール', '高速化した薄板を巻取側へ誘導', { align: 'center', seed: 920 });
+        addCallout(common, TENSION_C.x + 12, TENSION_C.y + 52, 1118, 578, 'テンションリール（巻取機）', '一定の前方張力で精密巻取り', { align: 'center', seed: 922 });
+
+        // 6段UCミル・非透過時
+        const s6 = svgEl('g', {}, layerAnnotations);
+        refs.annoSolid6 = s6;
+        addCallout(s6, MILL_CX, 146, MILL_CX, 102, '油圧圧下装置（圧下シリンダー）', '高荷重でロール間隔をミクロン制御', { color: '#b03326', align: 'center', seed: 930 });
+        addCallout(s6, MILL_CX - 102, 264, 480, 210, '門型鋼鉄ハウジング', '強大な圧延反力を受け止める高剛性枠', { align: 'right', seed: 932 });
+        addCallout(s6, MILL_CX + 76, PASSLINE_Y - 12, 804, 210, '安全カバー＆点検窓', '「内部透過」で6段ロール構造を表示', { align: 'left', seed: 934 });
+
+        // 20段・非透過時
+        const s20 = svgEl('g', {}, layerAnnotations);
+        refs.annoSolid20 = s20;
+        addCallout(s20, MILL_CX, 174, MILL_CX, 112, '偏心圧下駆動ユニット', '分割バックアップ軸の偏心回転で圧下', { color: '#b03326', align: 'center', seed: 940 });
+        addCallout(s20, MILL_CX - 134, 272, 468, 212, '一体型モノブロックハウジング', '継ぎ目のない鋳鋼ブロックで極高剛性', { align: 'right', seed: 942 });
+        addCallout(s20, MILL_CX + 120, PASSLINE_Y - 10, 814, 212, '円形フロントドア', '「内部透過」で1-2-3-4クラスターを表示', { align: 'left', seed: 944 });
+
+        // 6段UCミル・透過時
+        const x6 = svgEl('g', {}, layerAnnotations);
+        refs.annoXray6 = x6;
+        const uWR6 = GEOM_6HI.rolls[0];
+        const uIMR6 = GEOM_6HI.rolls[1];
+        const uBUR6 = GEOM_6HI.rolls[2];
+        addCallout(x6, MILL_CX, 206, MILL_CX, 104, '油圧圧下シリンダー', '圧延荷重をバックアップロールへ伝達', { color: '#b03326', align: 'center', seed: 950 });
+        addCallout(x6, uBUR6.x - uBUR6.r + 4, uBUR6.y, 484, 198, 'バックアップロール（BUR）', '大径ロールで全体のたわみを抑制', { align: 'right', seed: 952 });
+        addCallout(x6, uIMR6.x + uIMR6.r + 24, uIMR6.y, 806, 196, '中間ロール（IMR・軸シフト）', '軸方向シフトで板クラウン・平坦度制御', { align: 'left', seed: 954 });
+        addCallout(x6, uWR6.x + uWR6.r + 12, uWR6.y, 806, 248, 'ワークロール（WR）＋ベンダー', '銅条を直接圧下し微細形状を補正', { color: '#b03326', align: 'left', seed: 956 });
+        addCallout(x6, MILL_CX - 56, PASSLINE_Y + 26, 488, 488, 'クーラント（圧延油）ノズル', '摩擦低減と加工発熱の冷却を同時実施', { color: '#1b6d8a', align: 'right', seed: 958 });
+
+        // 20段・透過時
+        const x20 = svgEl('g', {}, layerAnnotations);
+        refs.annoXray20 = x20;
+        const uWR20 = GEOM_20HI.rolls[0];
+        const uIMR1 = GEOM_20HI.rolls[1];
+        const uIMR2 = GEOM_20HI.rolls[5];
+        const uBKG = GEOM_20HI.rolls[8];
+        addCallout(x20, MILL_CX, 184, MILL_CX, 108, '一体型モノブロック＋偏心圧下', '極高剛性構造で極薄銅条の板厚を維持', { color: '#b03326', align: 'center', seed: 960 });
+        addCallout(x20, uBKG.x + 12, uBKG.y - 12, 816, 186, '分割バックアップ軸（A〜D / E〜H）', '偏心内軸＋回転外輪の4本×上下で支持', { align: 'left', seed: 962 });
+        addCallout(x20, uIMR2.x + 16, uIMR2.y, 816, 238, '第2中間ロール（3本×上下）', '外側2本が駆動軸としてトルクを伝達', { align: 'left', seed: 964 });
+        addCallout(x20, uIMR1.x - 10, uIMR1.y, 466, 200, '第1中間ロール（2本×上下）', 'ワークロールを左右斜めから確実に挟持', { align: 'right', seed: 966 });
+        addCallout(x20, uWR20.x - 5, uWR20.y, 466, 252, '極小径ワークロール（1本×上下）', '接触弧を極小化し高圧下・極薄圧延を実現', { color: '#b03326', align: 'right', seed: 968 });
+        addCallout(x20, MILL_CX - 60, PASSLINE_Y + 22, 486, 492, '圧延油スプレー＆ワイパー', 'ロールバイトの潤滑・冷却と油切り', { color: '#1b6d8a', align: 'right', seed: 970 });
+      }
+
+      // --- 5-H. ロールバイト拡大図インセットの結晶粒プール生成 ---
+      function buildInsetGrains() {
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 14; col++) {
+            const ell = svgEl('ellipse', {
+              cx: 0, cy: 84, rx: 5, ry: 4,
+              fill: 'rgba(255, 236, 212, 0.22)',
+              stroke: '#782c0e', 'stroke-width': 1.05, 'stroke-opacity': 0.72
+            }, refs.insetGrainsGroup);
+            refs.insetGrains.push({
+              el: ell,
+              row, // 0, 1, 2
+              col,
+              jitterY: hash1(row * 53 + col * 19) * 0.08
+            });
+          }
+        }
+      }
+
+      // 拡大図のワークロール径（6段は大径、20段は極小径）を再構築
+      function ensureInsetRolls(millType, t1Vis) {
+        const key = `${millType}_${Math.round(t1Vis)}`;
+        if (refs.insetRollMode === key) return;
+        refs.insetRollMode = key;
+
+        refs.insetTopRoll.innerHTML = '';
+        refs.insetBotRoll.innerHTML = '';
+
+        const wrR = millType === 'uc6' ? 92 : 42;
+        const cx = 176;
+        const cyTop = 84 - t1Vis * 0.5 - wrR;
+        const cyBot = 84 + t1Vis * 0.5 + wrR;
+
+        refs.insetTopRot = buildSketchRollSVG(refs.insetTopRoll, { x: cx, y: cyTop, r: wrR, role: 'WR', side: -1 }, 1100);
+        refs.insetBotRot = buildSketchRollSVG(refs.insetBotRoll, { x: cx, y: cyBot, r: wrR, role: 'WR', side: 1 }, 1110);
+      }
+
+      /* =======================================================================
+         6. アプリケーション状態・物理演算・カメラ＆ズーム制御
+         ======================================================================= */
+      const state = {
+        playing: true,
+        speed: 1.0,
+        videoTime: 0,
+        animTime: 0,
+
+        millType: 'uc6',
+        reduction: 0.60,
+        xray: 0.0,
+        xrayTarget: 0.0,
+        showAnnotations: true,
+        showInset: false,
+        showSubtitles: true,
+
+        // ユーザー手動操作オーバーライド（ユーザー操作を常に尊重）
+        overrides: {
+          mill: false,
+          xray: false,
+          red: false,
+          anno: false,
+          inset: false,
+          subs: false,
+          camera: false
+        },
+
+        // 物理累積量
+        coilProgress: 0.14,
+        entryPhase: 0,
+        payoffAngle: 0,
+        tensionAngle: 0,
+        snubberAngle: 0,
+        entryDefAngle: 0,
+        exitDefAngle: 0,
+        rollSurfaceDist: 0,
+        imrShiftPhase: 0,
+
+        // SVG viewBox カメラ（ストーリー自動ズーム & 自由ズーム/パン統合）
+        cam: { ...VB_FULL },
+        targetCam: { ...VB_FULL }
+      };
+
+      function getChapterAt(t) {
+        for (let i = CHAPTERS.length - 1; i >= 0; i--) {
+          if (t >= CHAPTERS[i].start) return CHAPTERS[i];
+        }
+        return CHAPTERS[0];
+      }
+
+      function getSubtitleAt(ch, t) {
+        let s = ch.subs[0];
+        for (const item of ch.subs) {
+          if (t >= item.at) s = item;
+        }
+        return s;
+      }
+
+      // コイル外径（断面積保存則：R_po^2 + R_tr^2 = R_min^2 + R_max^2）
+      function getCoilRadii() {
+        const minSq = COIL_R_MIN * COIL_R_MIN;
+        const maxSq = COIL_R_MAX * COIL_R_MAX;
+        const p = Math.max(0.06, Math.min(0.94, state.coilProgress));
+        return {
+          rPayoff: Math.sqrt(maxSq - p * (maxSq - minSq)),
+          rTension: Math.sqrt(minSq + p * (maxSq - minSq)),
+          remainPct: Math.round((1 - p) * 100)
+        };
+      }
+
+      function clampCamera(c) {
+        const w = Math.max(VB_FULL.w / 6.0, Math.min(VB_FULL.w, c.w));
+        const h = w * (VB_FULL.h / VB_FULL.w);
+        const minX = -60;
+        const maxX = VB_FULL.w - w + 60;
+        const minY = -40;
+        const maxY = VB_FULL.h - h + 40;
+        return {
+          x: Math.max(minX, Math.min(maxX, c.x)),
+          y: Math.max(minY, Math.min(maxY, c.y)),
+          w,
+          h
+        };
+      }
+
+      // 自動ストーリーのキーフレームを状態へ反映
+      function syncStory(dt) {
+        const ch = getChapterAt(state.videoTime);
+        if (!state.overrides.mill) state.millType = ch.mill;
+        if (!state.overrides.xray) state.xrayTarget = ch.xray;
+        if (!state.overrides.red) state.reduction = ch.red;
+        if (!state.overrides.anno) state.showAnnotations = ch.anno;
+        if (!state.overrides.inset) state.showInset = ch.inset;
+        if (!state.overrides.camera) {
+          state.targetCam = clampCamera(ch.cam);
+        }
+
+        // 透過度の滑らかな補間
+        const xDiff = state.xrayTarget - state.xray;
+        state.xray = Math.abs(xDiff) < 0.002 ? state.xrayTarget : state.xray + xDiff * Math.min(1, dt * 4.2);
+
+        // SVG viewBox カメラの滑らかな補間
+        const k = state.overrides.camera ? Math.min(1, dt * 14) : Math.min(1, dt * 3.2);
+        state.cam.x += (state.targetCam.x - state.cam.x) * k;
+        state.cam.y += (state.targetCam.y - state.cam.y) * k;
+        state.cam.w += (state.targetCam.w - state.cam.w) * k;
+        state.cam.h += (state.targetCam.h - state.cam.h) * k;
+      }
+
+      // 物理ステート更新（体積一定則 v0*t0 = v1*t1 & 角速度 ω = v/R）
+      function updatePhysics(dt) {
+        const cfg = MILL_CONFIGS[state.millType];
+        const ratio = 1 / (1 - state.reduction);
+        const v0 = cfg.entrySpeed;
+        const v1 = v0 * ratio;
+
+        state.entryPhase += v0 * dt;
+        state.rollSurfaceDist += ((v0 + v1) * 0.5) * dt;
+        state.imrShiftPhase += dt * 1.25;
+
+        if (state.playing) {
+          state.coilProgress += dt * 0.014;
+          if (state.coilProgress > 0.92) state.coilProgress = 0.08;
+        }
+
+        const { rPayoff, rTension } = getCoilRadii();
+        state.payoffAngle += (v0 / rPayoff) * dt;
+        state.tensionAngle += (v1 / rTension) * dt;
+        state.snubberAngle -= (v0 / SNUBBER_R) * dt; // コイル外周と外接するため逆回転
+        state.entryDefAngle += (v0 / ENTRY_DEF.r) * dt;
+        state.exitDefAngle += (v1 / EXIT_DEF.r) * dt;
+      }
+
+      /* =======================================================================
+         7. 毎フレーム SVG 属性・transform 反映（60fps ベクター更新）
+         ======================================================================= */
+      let lastLayerDrawKey = '';
+
+      function updateSVGScene() {
+        const cfg = MILL_CONFIGS[state.millType];
+        const ratio = 1 / (1 - state.reduction);
+        const t0 = cfg.t0;
+        const t1 = t0 * (1 - state.reduction);
+        const visT0 = cfg.visT0;
+        const visT1 = Math.max(2.4, visT0 * (1 - state.reduction));
+        const { rPayoff, rTension, remainPct } = getCoilRadii();
+
+        // 1) SVG viewBox 更新
+        mainSvg.setAttribute(
+          'viewBox',
+          `${state.cam.x.toFixed(2)} ${state.cam.y.toFixed(2)} ${state.cam.w.toFixed(2)} ${state.cam.h.toFixed(2)}`
+        );
+
+        // 2) 圧延機表示切替 & 内部透過反映
+        const is20 = state.millType === 'cluster20';
+        mill6HiGroup.setAttribute('display', is20 ? 'none' : 'inline');
+        mill20HiGroup.setAttribute('display', is20 ? 'inline' : 'none');
+
+        const solidOp = Math.pow(1 - state.xray, 1.35);
+        const phantomOp = state.xray > 0.03 ? Math.min(0.75, state.xray * 0.85) : 0;
+        const internalOp = Math.min(1, 0.14 + state.xray * 1.15);
+
+        refs.housing6Solid.setAttribute('opacity', solidOp.toFixed(3));
+        refs.housing6Phantom.setAttribute('opacity', phantomOp.toFixed(3));
+        refs.internal6.setAttribute('opacity', internalOp.toFixed(3));
+
+        refs.housing20Solid.setAttribute('opacity', solidOp.toFixed(3));
+        refs.housing20Phantom.setAttribute('opacity', phantomOp.toFixed(3));
+        refs.internal20.setAttribute('opacity', internalOp.toFixed(3));
+
+        // 3) ペイオフ・テンションコイル径 & 巻き層 & 回転角
+        refs.payoffOuterCircle.setAttribute('r', rPayoff.toFixed(2));
+        refs.tensionOuterCircle.setAttribute('r', rTension.toFixed(2));
+
+        const degPO = (state.payoffAngle * 180) / Math.PI;
+        const degTR = (state.tensionAngle * 180) / Math.PI;
+        refs.payoffRotGroup.setAttribute('transform', `rotate(${degPO.toFixed(2)})`);
+        refs.tensionRotGroup.setAttribute('transform', `rotate(${degTR.toFixed(2)})`);
+
+        // コイル端面スポーク長を外径に同期（はみ出し防止）
+        refs.payoffRotGroup.querySelectorAll('.coil-spoke').forEach((ln, i) => {
+          const a = (i * Math.PI) / 2;
+          ln.setAttribute('x2', (Math.cos(a) * (rPayoff - 3)).toFixed(1));
+          ln.setAttribute('y2', (Math.sin(a) * (rPayoff - 3)).toFixed(1));
+        });
+        refs.tensionRotGroup.querySelectorAll('.coil-spoke').forEach((ln, i) => {
+          const a = (i * Math.PI) / 2;
+          ln.setAttribute('x2', (Math.cos(a) * (rTension - 3)).toFixed(1));
+          ln.setAttribute('y2', (Math.sin(a) * (rTension - 3)).toFixed(1));
+        });
+
+        // 巻き層リングは径が1px以上変わった時だけ再生成して高速化
+        const layerKey = `${Math.round(rPayoff)}_${Math.round(rTension)}`;
+        if (layerKey !== lastLayerDrawKey) {
+          lastLayerDrawKey = layerKey;
+          const fillRings = (grp, outerR, step) => {
+            grp.innerHTML = '';
+            for (let rr = COIL_R_CORE + step; rr < outerR - 1.5; rr += step) {
+              svgEl('circle', {
+                cx: 0, cy: 0, r: rr.toFixed(1),
+                fill: 'none', stroke: '#742e10', 'stroke-width': 0.9, 'stroke-opacity': 0.42
+              }, grp);
+            }
+          };
+          fillRings(refs.payoffLayersGroup, rPayoff, 6.2);
+          fillRings(refs.tensionLayersGroup, rTension, 3.8);
+        }
+
+        // スナバーロールをペイオフコイル外周の左上48度位置にリアルタイム追従接触
+        const snAng = -Math.PI * 0.72;
+        const snDist = rPayoff + SNUBBER_R;
+        const snX = PAYOFF_C.x + Math.cos(snAng) * snDist;
+        const snY = PAYOFF_C.y + Math.sin(snAng) * snDist;
+        refs.snubberArmLine.setAttribute('x2', snX.toFixed(1));
+        refs.snubberArmLine.setAttribute('y2', snY.toFixed(1));
+        refs.snubberArmLine2.setAttribute('x2', snX.toFixed(1));
+        refs.snubberArmLine2.setAttribute('y2', snY.toFixed(1));
+        refs.snubberRollWrap.setAttribute('transform', `translate(${snX.toFixed(1)}, ${snY.toFixed(1)})`);
+        refs.snubberRollRot.setAttribute('transform', `rotate(${((state.snubberAngle * 180) / Math.PI).toFixed(2)})`);
+
+        // デフレクターロール回転
+        refs.entryDefRot.setAttribute('transform', `rotate(${((state.entryDefAngle * 180) / Math.PI).toFixed(2)})`);
+        refs.exitDefRot.setAttribute('transform', `rotate(${((state.exitDefAngle * 180) / Math.PI).toFixed(2)})`);
+
+        // 4) 銅条の幾何形状＆体積一定マーカー更新
+        const tanL = upperExternalTangent(PAYOFF_C, rPayoff, ENTRY_DEF, ENTRY_DEF.r);
+        const tanR = upperExternalTangent(EXIT_DEF, EXIT_DEF.r, TENSION_C, rTension);
+        const biteHalf = is20 ? 9 : 14;
+        const biteInX = MILL_CX - biteHalf;
+        const biteOutX = MILL_CX + biteHalf;
+
+        const setBandPoly = (polyEl, pA, pB, thick) => {
+          const dx = pB.x - pA.x;
+          const dy = pB.y - pA.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = (-dy / len) * (thick * 0.5);
+          const ny = (dx / len) * (thick * 0.5);
+          polyEl.setAttribute(
+            'points',
+            `${(pA.x + nx).toFixed(1)},${(pA.y + ny).toFixed(1)} ` +
+            `${(pB.x + nx).toFixed(1)},${(pB.y + ny).toFixed(1)} ` +
+            `${(pB.x - nx).toFixed(1)},${(pB.y - ny).toFixed(1)} ` +
+            `${(pA.x - nx).toFixed(1)},${(pA.y - ny).toFixed(1)}`
+          );
+        };
+
+        const entryDefTop = { x: ENTRY_DEF.x, y: PASSLINE_Y };
+        const exitDefTop = { x: EXIT_DEF.x, y: PASSLINE_Y };
+        setBandPoly(refs.stripEntrySlope, tanL.p1, entryDefTop, visT0);
+        setBandPoly(refs.stripEntryHoriz, entryDefTop, { x: biteInX, y: PASSLINE_Y }, visT0);
+
+        const midH = (visT0 * 0.35 + visT1 * 0.65) * 0.5;
+        refs.stripBite.setAttribute(
+          'points',
+          `${biteInX},${(PASSLINE_Y - visT0 * 0.5).toFixed(1)} ` +
+          `${MILL_CX},${(PASSLINE_Y - midH).toFixed(1)} ` +
+          `${biteOutX},${(PASSLINE_Y - visT1 * 0.5).toFixed(1)} ` +
+          `${biteOutX},${(PASSLINE_Y + visT1 * 0.5).toFixed(1)} ` +
+          `${MILL_CX},${(PASSLINE_Y + midH).toFixed(1)} ` +
+          `${biteInX},${(PASSLINE_Y + visT0 * 0.5).toFixed(1)}`
+        );
+
+        setBandPoly(refs.stripExitHoriz, { x: biteOutX, y: PASSLINE_Y }, exitDefTop, visT1);
+        setBandPoly(refs.stripExitSlope, exitDefTop, tanR.p2, visT1);
+
+        // 体積一定則マーカー（入側：ピッチ spacing0、出側：ピッチ spacing0 * ratio）
+        const spacing0 = 26;
+        const entryHorizLen = biteInX - entryDefTop.x;
+        const exitHorizLen = exitDefTop.x - biteOutX;
+        const inOff = ((state.entryPhase % spacing0) + spacing0) % spacing0;
+
+        refs.entryMarkers.forEach((m, i) => {
+          const x = entryDefTop.x + inOff + i * spacing0;
+          if (x <= biteInX - 2) {
+            m.setAttribute('display', 'inline');
+            m.setAttribute('transform', `translate(${x.toFixed(1)}, ${PASSLINE_Y})`);
+          } else {
+            m.setAttribute('display', 'none');
+          }
+        });
+
+        const spacing1 = spacing0 * ratio;
+        const outOff = (((state.entryPhase - entryHorizLen) * ratio) % spacing1 + spacing1) % spacing1;
+        refs.exitMarkers.forEach((m, i) => {
+          const x = biteOutX + outOff + i * spacing1;
+          if (x <= exitDefTop.x - 2) {
+            m.setAttribute('display', 'inline');
+            m.setAttribute('transform', `translate(${x.toFixed(1)}, ${PASSLINE_Y})`);
+          } else {
+            m.setAttribute('display', 'none');
+          }
+        });
+
+        // 板厚計・速度ラベル更新
+        refs.entryGaugeValText.textContent = `${t0.toFixed(2)} mm`;
+        refs.exitGaugeValText.textContent = `${t1.toFixed(2)} mm`;
+        refs.speedEntryLabel.textContent = `速度 v₀ (1.00×)`;
+        refs.speedExitLabel.textContent = `速度 v₁ (${ratio.toFixed(2)}×)`;
+
+        // 5) 圧延機 全ロールの連動回転（周速完全一致）
+        const activeRolls = is20 ? refs.rolls20 : refs.rolls6;
+        for (const item of activeRolls) {
+          const deg = ((state.rollSurfaceDist / item.roll.r) * item.roll.dir * 180) / Math.PI;
+          item.rotG.setAttribute('transform', `rotate(${deg.toFixed(2)})`);
+        }
+
+        // 6段UC中間ロールシフト動作の視覚表現
+        if (!is20) {
+          const shiftPx = Math.sin(state.imrShiftPhase) * 18;
+          for (const ind of refs.imrShiftIndicators) {
+            const sDir = ind.side < 0 ? 1 : -1;
+            ind.el.setAttribute('x', (ind.baseX + sDir * shiftPx - 4).toFixed(1));
+          }
+        }
+
+        // 油圧圧下矢印の微脈動
+        const pulse = Math.sin(state.animTime * 4.5) * 1.5;
+        refs.hydraulicArrows.forEach((arr) => {
+          arr.setAttribute('transform', `translate(0, ${pulse.toFixed(2)})`);
+        });
+
+        // 6) クーラント飛沫アニメーション
+        const activeCoolant = is20 ? refs.coolantParticles20 : refs.coolantParticles6;
+        if (state.xray > 0.02) {
+          for (const pt of activeCoolant) {
+            const t = (pt.phase + state.animTime * 1.35 * pt.speed) % 1;
+            const nx = MILL_CX + pt.sx * pt.nozzleX;
+            const ny = PASSLINE_Y + pt.sy * pt.nozzleY;
+            const tx = MILL_CX + pt.sx * 8;
+            const ty = PASSLINE_Y + pt.sy * 4;
+            const px = nx + (tx - nx) * t + pt.spread * 9 * t;
+            const py = ny + (ty - ny) * t + pt.spread * 7 * t + t * t * 6;
+            const op = Math.sin(t * Math.PI) * 0.85;
+            pt.el.setAttribute('cx', px.toFixed(1));
+            pt.el.setAttribute('cy', py.toFixed(1));
+            pt.el.setAttribute('r', (1.2 + (1 - t) * 1.3).toFixed(2));
+            pt.el.setAttribute('opacity', op.toFixed(2));
+          }
+        }
+
+        // 7) 注釈レイヤーの動的切替（圧延機タイプ × 透過状態）
+        layerAnnotations.setAttribute('display', state.showAnnotations ? 'inline' : 'none');
+        if (state.showAnnotations) {
+          const isXrayMode = state.xray >= 0.32;
+          refs.annoSolid6.setAttribute('display', (!is20 && !isXrayMode) ? 'inline' : 'none');
+          refs.annoSolid20.setAttribute('display', (is20 && !isXrayMode) ? 'inline' : 'none');
+          refs.annoXray6.setAttribute('display', (!is20 && isXrayMode) ? 'inline' : 'none');
+          refs.annoXray20.setAttribute('display', (is20 && isXrayMode) ? 'inline' : 'none');
+        }
+
+        // 8) ロールバイト拡大図インセット（独立ベクターSVGの60fps更新）
+        if (state.showInset) {
+          updateRollBiteInset(t0, t1, ratio);
+        }
+
+        // 9) HUDリアルタイム諸元反映
+        el.specMillShort.textContent = cfg.short;
+        el.specT0.textContent = `${t0.toFixed(2)} mm`;
+        el.specT1.textContent = `${t1.toFixed(2)} mm`;
+        el.specRed.textContent = `${(state.reduction * 100).toFixed(1)} %`;
+        el.specRatio.textContent = `${ratio.toFixed(2)} ×`;
+        el.specCoilText.textContent = `巻出残 ${remainPct}%`;
+        el.specCoilFill.style.width = `${remainPct}%`;
+        el.zoomReadout.textContent = `${(VB_FULL.w / state.cam.w).toFixed(1)}×`;
+      }
+
+      // ロールバイト拡大図（等軸結晶粒→扁平繊維組織・加工硬化・中立点）更新
+      function updateRollBiteInset(t0, t1, ratio) {
+        const zT0 = 46;
+        const zT1 = Math.max(12, zT0 * (1 - state.reduction));
+        const biteStart = state.millType === 'uc6' ? 114 : 138;
+        const biteEnd = 176;
+        const cy = 84;
+
+        ensureInsetRolls(state.millType, zT1);
+
+        // 銅条変形プロファイル（入側→ロール弧に沿って圧下→出側）
+        const dPath =
+          `M 0 ${(cy - zT0 * 0.5).toFixed(1)} ` +
+          `L ${biteStart} ${(cy - zT0 * 0.5).toFixed(1)} ` +
+          `Q ${((biteStart + biteEnd) * 0.52).toFixed(1)} ${(cy - zT1 * 0.56).toFixed(1)} ${biteEnd} ${(cy - zT1 * 0.5).toFixed(1)} ` +
+          `L 310 ${(cy - zT1 * 0.5).toFixed(1)} ` +
+          `L 310 ${(cy + zT1 * 0.5).toFixed(1)} ` +
+          `L ${biteEnd} ${(cy + zT1 * 0.5).toFixed(1)} ` +
+          `Q ${((biteStart + biteEnd) * 0.52).toFixed(1)} ${(cy + zT1 * 0.56).toFixed(1)} ${biteStart} ${(cy + zT0 * 0.5).toFixed(1)} ` +
+          `L 0 ${(cy + zT0 * 0.5).toFixed(1)} Z`;
+
+        refs.insetStripShape.setAttribute('d', dPath);
+        refs.insetStripClipPath.setAttribute('d', dPath);
+
+        // クーラント潤滑くさび
+        refs.insetCoolantTop.setAttribute(
+          'd',
+          `M ${biteStart - 34} ${(cy - zT0 * 0.5 - 16).toFixed(1)} L ${biteStart + 16} ${(cy - zT0 * 0.5).toFixed(1)} L ${biteStart - 22} ${(cy - zT0 * 0.5).toFixed(1)} Z`
+        );
+        refs.insetCoolantBot.setAttribute(
+          'd',
+          `M ${biteStart - 34} ${(cy + zT0 * 0.5 + 16).toFixed(1)} L ${biteStart + 16} ${(cy + zT0 * 0.5).toFixed(1)} L ${biteStart - 22} ${(cy + zT0 * 0.5).toFixed(1)} Z`
+        );
+
+        // ワークロール回転
+        const rollScaleR = state.millType === 'uc6' ? 28 : 14;
+        const deg = ((state.rollSurfaceDist / rollScaleR) * 180) / Math.PI;
+        if (refs.insetTopRot) refs.insetTopRot.setAttribute('transform', `rotate(${(-deg).toFixed(2)})`);
+        if (refs.insetBotRot) refs.insetBotRot.setAttribute('transform', `rotate(${deg.toFixed(2)})`);
+
+        // 結晶粒の流動と扁平・繊維組織化（体積一定で縦に潰れ横に伸びて加速！）
+        const step0 = 22;
+        const totalCols = 14;
+        const flowPhase = (state.entryPhase * 0.72) % (step0 * totalCols);
+
+        for (const g of refs.insetGrains) {
+          // 基準座標 u（入側仮想座標 0..308）
+          const u = ((g.col * step0 + flowPhase) % (step0 * totalCols));
+          let x, localH, stretch;
+          if (u <= biteStart) {
+            x = u;
+            localH = zT0;
+            stretch = 1.0;
+          } else {
+            // ロールバイト通過以降は体積一定で横方向位置が ratio 倍に伸長
+            const du = u - biteStart;
+            const biteSpan = biteEnd - biteStart;
+            if (du < biteSpan * 0.65) {
+              const frac = du / (biteSpan * 0.65);
+              const avgRatio = 1 + (ratio - 1) * frac * 0.65;
+              x = biteStart + du * avgRatio;
+              stretch = 1 + (ratio - 1) * frac;
+              localH = zT0 / stretch;
+            } else {
+              const afterU = du - biteSpan * 0.65;
+              const startX = biteStart + biteSpan * 0.65 * (1 + (ratio - 1) * 0.65);
+              x = startX + afterU * ratio;
+              stretch = ratio;
+              localH = zT1;
+            }
+          }
+
+          if (x > 330) {
+            g.el.setAttribute('display', 'none');
+            continue;
+          }
+          g.el.setAttribute('display', 'inline');
+          const rowFrac = (g.row - 1) * 0.30 + g.jitterY;
+          const gy = cy + localH * rowFrac;
+          const rx = Math.min(18, 5.2 * Math.pow(stretch, 0.85));
+          const ry = Math.max(1.6, 4.4 / Math.pow(stretch, 0.85));
+
+          g.el.setAttribute('cx', x.toFixed(1));
+          g.el.setAttribute('cy', gy.toFixed(1));
+          g.el.setAttribute('rx', rx.toFixed(2));
+          g.el.setAttribute('ry', ry.toFixed(2));
+        }
+
+        refs.insetLabelIn.textContent = `等軸結晶粒 (t₀=${t0.toFixed(2)}mm)`;
+        refs.insetLabelOut.textContent = `繊維組織・加工硬化 (t₁=${t1.toFixed(2)}mm)`;
+        refs.insetWRBadge.textContent = MILL_CONFIGS[state.millType].wrBadge;
+        refs.insetCaption.textContent = state.millType === 'uc6'
+          ? `6段WR｜圧下率 ${(state.reduction * 100).toFixed(0)}%・速度比 ${ratio.toFixed(2)}×（加工硬化で高強度化）`
+          : `極小径WRで接触弧短縮｜圧下率 ${(state.reduction * 100).toFixed(0)}%・速度比 ${ratio.toFixed(2)}×`;
+      }
+
+      /* =======================================================================
+         8. UI 要素バインディング & 自由ズーム＆パン操作（マウス・タッチ対応）
+         ======================================================================= */
+      const el = {
+        hudChapterText: document.getElementById('hudChapterText'),
+        zoomReadout: document.getElementById('zoomReadout'),
+        btnZoomIn: document.getElementById('btnZoomIn'),
+        btnZoomOut: document.getElementById('btnZoomOut'),
+        btnResetView: document.getElementById('btnResetView'),
+        specMillShort: document.getElementById('specMillShort'),
+        specT0: document.getElementById('specT0'),
+        specT1: document.getElementById('specT1'),
+        specRed: document.getElementById('specRed'),
+        specRatio: document.getElementById('specRatio'),
+        specCoilText: document.getElementById('specCoilText'),
+        specCoilFill: document.getElementById('specCoilFill'),
+        insetCard: document.getElementById('insetCard'),
+        subtitleBar: document.getElementById('subtitleBar'),
+        subBadge: document.getElementById('subBadge'),
+        subLine1: document.getElementById('subLine1'),
+        subLine2: document.getElementById('subLine2'),
+        btnPlayPause: document.getElementById('btnPlayPause'),
+        playIcon: document.getElementById('playIcon'),
+        playText: document.getElementById('playText'),
+        btnRestart: document.getElementById('btnRestart'),
+        speedSelect: document.getElementById('speedSelect'),
+        seekBar: document.getElementById('seekBar'),
+        timeLabel: document.getElementById('timeLabel'),
+        chapterBar: document.getElementById('chapterBar'),
+        btnMill6: document.getElementById('btnMill6'),
+        btnMill20: document.getElementById('btnMill20'),
+        btnXray: document.getElementById('btnXray'),
+        xraySlider: document.getElementById('xraySlider'),
+        xrayVal: document.getElementById('xrayVal'),
+        redSlider: document.getElementById('redSlider'),
+        redVal: document.getElementById('redVal'),
+        btnAnno: document.getElementById('btnAnno'),
+        btnInset: document.getElementById('btnInset'),
+        btnSubs: document.getElementById('btnSubs'),
+        btnAutoSync: document.getElementById('btnAutoSync'),
+        toast: document.getElementById('toast')
+      };
+
+      let toastTimer = null;
+      function showToast(msg) {
+        el.toast.textContent = msg;
+        el.toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2400);
+      }
+
+      function fmtTime(sec) {
+        const s = Math.max(0, Math.floor(sec));
+        return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+      }
+
+      // チャプターボタン生成
+      const chapButtons = [];
+      CHAPTERS.forEach((ch) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chap-btn';
+        b.textContent = ch.short;
+        b.title = ch.title;
+        b.addEventListener('click', () => {
+          state.videoTime = ch.start + 0.05;
+          clearOverrides(false);
+          syncStory(0.05);
+          state.playing = true;
+          syncUI();
+          showToast(ch.title);
+        });
+        el.chapterBar.appendChild(b);
+        chapButtons.push(b);
+      });
+
+      function hasOverrides() {
+        return Object.values(state.overrides).some(Boolean);
+      }
+
+      function clearOverrides(notify = true) {
+        Object.keys(state.overrides).forEach((k) => { state.overrides[k] = false; });
+        if (notify) showToast('自動ストーリー演出とカメラ追従に同期しました');
+      }
+
+      function syncUI() {
+        const ch = getChapterAt(state.videoTime);
+        const sub = getSubtitleAt(ch, state.videoTime);
+
+        el.hudChapterText.textContent = ch.title;
+        el.subBadge.textContent = `CH ${ch.id} / ${CHAPTERS.length}`;
+        el.subLine1.textContent = sub.l1;
+        el.subLine2.textContent = sub.l2;
+        el.subtitleBar.classList.toggle('hidden', !state.showSubtitles);
+        el.insetCard.classList.toggle('hidden', !state.showInset);
+
+        el.playIcon.textContent = state.playing ? '⏸' : '▶';
+        el.playText.textContent = state.playing ? '一時停止' : '再生';
+        el.seekBar.value = state.videoTime.toFixed(2);
+        el.timeLabel.textContent = `${fmtTime(state.videoTime)} / ${fmtTime(TOTAL_DURATION)}`;
+
+        chapButtons.forEach((b, idx) => b.classList.toggle('active', CHAPTERS[idx].id === ch.id));
+
+        el.btnMill6.classList.toggle('active', state.millType === 'uc6');
+        el.btnMill20.classList.toggle('active', state.millType === 'cluster20');
+
+        const xp = Math.round(state.xray * 100);
+        const xOn = state.xrayTarget >= 0.3;
+        el.btnXray.classList.toggle('active', xOn);
+        el.btnXray.textContent = xOn ? '内部透過 ON' : '内部透過 OFF';
+        el.xraySlider.value = String(xp);
+        el.xrayVal.textContent = `${xp}%`;
+
+        const rp = Math.round(state.reduction * 100);
+        el.redSlider.value = String(rp);
+        el.redVal.textContent = `${rp}%`;
+
+        el.btnAnno.classList.toggle('active', state.showAnnotations);
+        el.btnAnno.textContent = state.showAnnotations ? '注釈 ON' : '注釈 OFF';
+
+        el.btnInset.classList.toggle('active', state.showInset);
+        el.btnInset.textContent = state.showInset ? '拡大図 ON' : '拡大図 OFF';
+
+        el.btnSubs.classList.toggle('active', state.showSubtitles);
+        el.btnSubs.textContent = state.showSubtitles ? '字幕 ON' : '字幕 OFF';
+
+        el.btnAutoSync.classList.toggle('visible', hasOverrides());
+      }
+
+      // 画面座標 → SVGワールド座標変換
+      function clientToSvgPoint(clientX, clientY) {
+        const rect = mainSvg.getBoundingClientRect();
+        // preserveAspectRatio="xMidYMid meet" の実際の描画領域を厳密計算
+        const vbRatio = state.cam.w / state.cam.h;
+        const elRatio = rect.width / rect.height;
+        let drawW = rect.width;
+        let drawH = rect.height;
+        let offX = 0;
+        let offY = 0;
+        if (elRatio > vbRatio) {
+          drawW = rect.height * vbRatio;
+          offX = (rect.width - drawW) * 0.5;
+        } else {
+          drawH = rect.width / vbRatio;
+          offY = (rect.height - drawH) * 0.5;
+        }
+        const nx = (clientX - rect.left - offX) / drawW;
+        const ny = (clientY - rect.top - offY) / drawH;
+        return {
+          x: state.cam.x + nx * state.cam.w,
+          y: state.cam.y + ny * state.cam.h,
+          scaleX: state.cam.w / drawW,
+          scaleY: state.cam.h / drawH
+        };
+      }
+
+      function zoomAt(factor, pivotClientX, pivotClientY) {
+        state.overrides.camera = true;
+        const pt = (pivotClientX !== undefined)
+          ? clientToSvgPoint(pivotClientX, pivotClientY)
+          : { x: state.targetCam.x + state.targetCam.w * 0.5, y: state.targetCam.y + state.targetCam.h * 0.5 };
+
+        const curZoom = VB_FULL.w / state.targetCam.w;
+        const nextZoom = Math.max(1.0, Math.min(6.0, curZoom * factor));
+        const nextW = VB_FULL.w / nextZoom;
+        const nextH = VB_FULL.h / nextZoom;
+
+        const rx = (pt.x - state.targetCam.x) / state.targetCam.w;
+        const ry = (pt.y - state.targetCam.y) / state.targetCam.h;
+
+        state.targetCam = clampCamera({
+          x: pt.x - rx * nextW,
+          y: pt.y - ry * nextH,
+          w: nextW,
+          h: nextH
+        });
+        syncUI();
+      }
+
+      // マウスホイールズーム（1.0x〜6.0x）
+      mainSvg.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+        zoomAt(factor, e.clientX, e.clientY);
+      }, { passive: false });
+
+      // ドラッグパン移動（マウス & タッチ統一 PointerEvent）
+      let isDragging = false;
+      let dragStartClient = { x: 0, y: 0 };
+      let dragStartCam = { ...VB_FULL };
+      let dragScale = { x: 1, y: 1 };
+
+      mainSvg.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        isDragging = true;
+        mainSvg.classList.add('dragging');
+        mainSvg.setPointerCapture(e.pointerId);
+        const info = clientToSvgPoint(e.clientX, e.clientY);
+        dragStartClient = { x: e.clientX, y: e.clientY };
+        dragStartCam = { ...state.targetCam };
+        dragScale = { x: info.scaleX, y: info.scaleY };
+      });
+
+      mainSvg.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = (e.clientX - dragStartClient.x) * dragScale.x;
+        const dy = (e.clientY - dragStartClient.y) * dragScale.y;
+        if (Math.hypot(dx, dy) > 2) {
+          state.overrides.camera = true;
+          state.targetCam = clampCamera({
+            x: dragStartCam.x - dx,
+            y: dragStartCam.y - dy,
+            w: dragStartCam.w,
+            h: dragStartCam.h
+          });
+          // ドラッグ中は遅延なくダイレクト追従
+          state.cam = { ...state.targetCam };
+        }
+      });
+
+      const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        mainSvg.classList.remove('dragging');
+        syncUI();
+      };
+      mainSvg.addEventListener('pointerup', endDrag);
+      mainSvg.addEventListener('pointercancel', endDrag);
+
+      // ズームボタン & 視点リセット
+      el.btnZoomIn.addEventListener('click', () => zoomAt(1.35));
+      el.btnZoomOut.addEventListener('click', () => zoomAt(1 / 1.35));
+      el.btnResetView.addEventListener('click', () => {
+        state.overrides.camera = true;
+        state.targetCam = { ...VB_FULL };
+        syncUI();
+        showToast('全体表示（1.0×）へ戻しました');
+      });
+
+      // 再生・操作コントロール
+      el.btnPlayPause.addEventListener('click', () => {
+        state.playing = !state.playing;
+        syncUI();
+      });
+
+      el.btnRestart.addEventListener('click', () => {
+        state.videoTime = 0;
+        state.coilProgress = 0.10;
+        clearOverrides(false);
+        syncStory(0.05);
+        state.playing = true;
+        syncUI();
+        showToast('最初から自動解説を再生します');
+      });
+
+      el.speedSelect.addEventListener('change', () => {
+        state.speed = parseFloat(el.speedSelect.value) || 1.0;
+      });
+
+      el.seekBar.addEventListener('input', () => {
+        state.videoTime = parseFloat(el.seekBar.value) || 0;
+        state.coilProgress = 0.10 + (state.videoTime / TOTAL_DURATION) * 0.78;
+        syncStory(0.2);
+        syncUI();
+        updateSVGScene();
+      });
+
+      el.btnMill6.addEventListener('click', () => {
+        state.millType = 'uc6';
+        state.overrides.mill = true;
+        if (!state.overrides.red) state.reduction = MILL_CONFIGS.uc6.defaultRed;
+        syncUI();
+        showToast('6段 UCミル に切り替えました');
+      });
+
+      el.btnMill20.addEventListener('click', () => {
+        state.millType = 'cluster20';
+        state.overrides.mill = true;
+        if (!state.overrides.red) state.reduction = MILL_CONFIGS.cluster20.defaultRed;
+        syncUI();
+        showToast('20段圧延機（ゼンジミア）に切り替えました');
+      });
+
+      el.btnXray.addEventListener('click', () => {
+        state.overrides.xray = true;
+        state.xrayTarget = state.xrayTarget >= 0.3 ? 0.0 : 0.96;
+        syncUI();
+      });
+
+      el.xraySlider.addEventListener('input', () => {
+        const val = (parseInt(el.xraySlider.value, 10) || 0) / 100;
+        state.overrides.xray = true;
+        state.xrayTarget = val;
+        state.xray = val;
+        syncUI();
+      });
+
+      el.redSlider.addEventListener('input', () => {
+        const val = (parseInt(el.redSlider.value, 10) || 60) / 100;
+        state.overrides.red = true;
+        state.reduction = val;
+        syncUI();
+      });
+
+      el.btnAnno.addEventListener('click', () => {
+        state.showAnnotations = !state.showAnnotations;
+        state.overrides.anno = true;
+        syncUI();
+      });
+
+      el.btnInset.addEventListener('click', () => {
+        state.showInset = !state.showInset;
+        state.overrides.inset = true;
+        syncUI();
+      });
+
+      el.btnSubs.addEventListener('click', () => {
+        state.showSubtitles = !state.showSubtitles;
+        state.overrides.subs = true;
+        syncUI();
+      });
+
+      el.btnAutoSync.addEventListener('click', () => {
+        clearOverrides(true);
+        syncStory(0.05);
+        syncUI();
+      });
+
+      // キーボードショートカット
+      window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          state.playing = !state.playing;
+          syncUI();
+        } else if (e.key === '1') {
+          el.btnMill6.click();
+        } else if (e.key === '2') {
+          el.btnMill20.click();
+        } else if (e.key.toLowerCase() === 't') {
+          el.btnXray.click();
+        } else if (e.key.toLowerCase() === 'a') {
+          el.btnAnno.click();
+        } else if (e.key.toLowerCase() === 'z') {
+          el.btnInset.click();
+        } else if (e.key.toLowerCase() === 'r') {
+          el.btnResetView.click();
+        }
+      });
+
+      /* =======================================================================
+         9. 初期化 & メインアニメーションループ（60fps requestAnimationFrame）
+         ======================================================================= */
+      let lastTs = 0;
+      let uiAccum = 0;
+
+      function animate(ts) {
+        if (!lastTs) lastTs = ts;
+        const rawDt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+        const simDt = rawDt * state.speed;
+
+        if (state.playing) {
+          state.animTime += simDt;
+          state.videoTime += simDt;
+          if (state.videoTime >= TOTAL_DURATION) {
+            state.videoTime = 0;
+            state.coilProgress = 0.10;
+          }
+          syncStory(rawDt);
+          updatePhysics(simDt);
+        } else {
+          syncStory(rawDt);
+        }
+
+        updateSVGScene();
+
+        uiAccum += rawDt;
+        if (uiAccum >= 0.07) {
+          uiAccum = 0;
+          syncUI();
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      window.onload = function () {
+        buildLineEquipment();
+        buildCopperStrip();
+        buildReels();
+        buildMill6Hi();
+        buildMill20Hi();
+        buildAllAnnotations();
+        buildInsetGrains();
+
+        syncStory(1.0);
+        updateSVGScene();
+        syncUI();
+        requestAnimationFrame(animate);
+      };
+    })();
+  </script>
+</body>
+</html>
